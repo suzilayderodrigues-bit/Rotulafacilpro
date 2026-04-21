@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>RótulaFácil Pro — Ficha técnica, tabela nutricional e precificação</title>
+<meta name="description" content="Gere ficha técnica, tabela nutricional, precificação e código de barras para sua confeitaria artesanal. Ferramenta completa para profissionalizar seu produto."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand:#B87A14;
+  --brand-light:#FEF8EE;
+  --brand-dark:#7A4A0A;
+  --text:#1A1208;
+  --text-sec:#6B5A3E;
+  --text-hint:#A8926A;
+  --bg:#FDFAF4;
+  --surface:#FFFFFF;
+  --border:#E8DFC8;
+  --border-light:#F0E8D4;
+  --success:#2D7A3A;
+  --danger:#A32D2D;
+  --radius:10px;
+  --radius-lg:16px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* HERO */
+.hero{background:var(--surface);border-bottom:1px solid var(--border);padding:0}
+.hero-inner{max-width:900px;margin:0 auto;padding:2rem 1.5rem 0;display:flex;align-items:flex-end;gap:2rem;flex-wrap:wrap}
+.hero-text{flex:1;min-width:260px;padding-bottom:2rem}
+.logo-wrap{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem}
+.logo-mark{width:42px;height:42px;border-radius:10px;background:var(--brand);display:flex;align-items:center;justify-content:center;color:#FFF8EE;font-size:14px;font-weight:500;font-family:'DM Sans',sans-serif;flex-shrink:0}
+.logo-name{font-family:'Playfair Display',serif;font-size:22px;color:var(--text)}
+.logo-name span{color:var(--brand)}
+.hero h1{font-family:'Playfair Display',serif;font-size:clamp(1.6rem,4vw,2.2rem);font-weight:400;line-height:1.25;color:var(--text);margin-bottom:.75rem}
+.hero p{font-size:15px;color:var(--text-sec);line-height:1.65;max-width:480px}
+.hero-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:1.25rem}
+.hbadge{font-size:12px;padding:4px 12px;border-radius:20px;background:var(--brand-light);color:var(--brand-dark);border:1px solid #DDAB40}
+.hero-img{width:220px;height:160px;background:linear-gradient(135deg,#FEF3DC 0%,#F5E6C0 100%);border-radius:var(--radius-lg) var(--radius-lg) 0 0;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hero-img svg{opacity:.35}
+
+/* MAIN */
+.main{max-width:900px;margin:0 auto;padding:2rem 1.5rem}
+
+/* TABS */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:2rem;overflow-x:auto}
+.tb{padding:10px 20px;font-size:14px;font-family:'DM Sans',sans-serif;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;color:var(--text-sec);white-space:nowrap;margin-bottom:-1px;transition:color .15s}
+.tb:hover{color:var(--text)}
+.tb.on{color:var(--text);border-bottom-color:var(--brand);font-weight:500}
+.sec{display:none}.sec.on{display:block}
+
+/* FORM */
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:1rem}
+.row3{display:grid;grid-template-columns:2fr 1fr auto;gap:10px;align-items:end;margin-bottom:1rem}
+.row4{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:center;margin-bottom:8px}
+.row4h{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;margin-bottom:6px}
+.row4h span{font-size:11px;color:var(--text-hint);font-weight:500;text-transform:uppercase;letter-spacing:.03em}
+.fg{margin-bottom:1rem}
+label{display:block;font-size:12px;font-weight:500;color:var(--text-sec);margin-bottom:5px;text-transform:uppercase;letter-spacing:.03em}
+input,select,textarea{width:100%;font-size:14px;font-family:'DM Sans',sans-serif;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;outline:none;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--brand)}
+textarea{min-height:80px;resize:vertical;line-height:1.6}
+.hr{border:none;border-top:1px solid var(--border-light);margin:1.5rem 0}
+.xbtn{width:28px;height:28px;border-radius:50%;background:none;border:1px solid var(--border);cursor:pointer;color:var(--text-hint);font-size:16px;display:flex;align-items:center;justify-content:center;font-family:'DM Sans',sans-serif;padding:0;flex-shrink:0;transition:all .15s}
+.xbtn:hover{background:#FDEAEA;border-color:#F09595;color:var(--danger)}
+.addbtn{font-size:13px;color:var(--brand);background:none;border:1px dashed var(--brand);border-radius:var(--radius);padding:7px 16px;cursor:pointer;margin-top:4px;font-family:'DM Sans',sans-serif;transition:background .15s}
+.addbtn:hover{background:var(--brand-light)}
+.cta{width:100%;margin-top:1.25rem;background:var(--brand);color:white;border:none;border-radius:var(--radius);padding:13px;font-size:14px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;letter-spacing:.01em;transition:background .15s}
+.cta:hover{background:var(--brand-dark)}
+
+/* CHIPS */
+.chip{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--brand-light);border:1px solid var(--border-light);border-radius:var(--radius);margin-bottom:5px;font-size:13px}
+.chip-x{background:none;border:none;cursor:pointer;color:var(--text-hint);font-size:16px;font-family:'DM Sans',sans-serif;padding:0;line-height:1}
+
+/* NUTRI BOX */
+.nutri-box{border:2.5px solid var(--text);border-radius:6px;padding:16px;margin-top:1rem;background:var(--surface)}
+.nb-title{font-size:22px;font-weight:500;font-family:'Playfair Display',serif;border-bottom:7px solid var(--text);padding-bottom:5px;margin-bottom:10px;color:var(--text)}
+.nb-sub{font-size:11px;color:var(--text-sec);margin-bottom:4px}
+.nb-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-light);font-size:13px;color:var(--text)}
+.nb-row.hvy{font-weight:500;font-size:14px}
+.nb-row.sub{padding-left:16px;font-size:12px;color:var(--text-sec)}
+.nb-note{font-size:10px;color:var(--text-hint);margin-top:8px}
+
+/* METRICS */
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:1rem}
+@media(max-width:480px){.metrics{grid-template-columns:1fr}}
+.met{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.met.hl{border:1.5px solid var(--brand)}
+.met-lbl{font-size:11px;color:var(--text-sec);font-weight:500;text-transform:uppercase;letter-spacing:.03em}
+.met-val{font-size:22px;font-weight:500;color:var(--text);margin-top:4px;font-family:'Playfair Display',serif}
+.met-val.amber{color:var(--brand)}
+.res-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;margin-top:1.5rem}
+.foot-row{display:flex;justify-content:space-between;font-size:13px;padding-top:10px;margin-top:10px;border-top:1px solid var(--border-light)}
+
+/* BARCODE */
+.type-btns{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap}
+.type-btn{flex:1;min-width:100px;padding:9px 8px;font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;color:var(--text-sec);font-family:'DM Sans',sans-serif;transition:all .15s;text-align:center}
+.type-btn:hover{border-color:var(--brand);color:var(--brand)}
+.type-btn.on{border-color:var(--brand);color:var(--brand);background:var(--brand-light);font-weight:500}
+.bc-card{border:1px solid var(--border);border-radius:var(--radius-lg);padding:2rem;margin-top:1.25rem;text-align:center;background:var(--surface)}
+.bc-tip{background:var(--brand-light);border:1px solid var(--border-light);border-radius:var(--radius);padding:14px;font-size:13px;color:var(--text-sec);margin-top:1.25rem;line-height:1.7}
+.bc-tip strong{color:var(--text);font-weight:500}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:2rem;color:var(--text-hint);font-size:14px}
+
+/* RESPONSIVE */
+@media(max-width:600px){
+  .row2{grid-template-columns:1fr}
+  .row4{grid-template-columns:1fr 80px auto;grid-template-rows:auto auto}
+  .row4 select{grid-column:1/3}
+  .hero-img{display:none}
+}
+
+/* FOOTER */
+footer{border-top:1px solid var(--border);padding:1.5rem;text-align:center;font-size:12px;color:var(--text-hint);margin-top:3rem}
+footer a{color:var(--brand);text-decoration:none}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-text">
+      <div class="logo-wrap">
+        <div class="logo-mark">RF</div>
+        <div class="logo-name">Rótula<span>Fácil</span> Pro</div>
+      </div>
+      <h1>Profissionalize seu produto de confeitaria artesanal</h1>
+      <p>Gere ficha técnica, tabela nutricional, precificação e código de barras em um só lugar. Pronto para entrar em supermercados, lojas e conveniências.</p>
+      <div class="hero-badges">
+        <span class="hbadge">Ficha técnica</span>
+        <span class="hbadge">Tabela nutricional ANVISA</span>
+        <span class="hbadge">Precificação</span>
+        <span class="hbadge">Código de barras EAN-13</span>
+      </div>
+    </div>
+    <div class="hero-img">
+      <svg width="120" height="80" viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="10" y="10" width="8" height="60" fill="#B87A14"/>
+        <rect x="22" y="10" width="4" height="60" fill="#B87A14"/>
+        <rect x="30" y="10" width="8" height="60" fill="#B87A14"/>
+        <rect x="42" y="10" width="4" height="60" fill="#B87A14"/>
+        <rect x="50" y="10" width="10" height="60" fill="#B87A14"/>
+        <rect x="64" y="10" width="4" height="60" fill="#B87A14"/>
+        <rect x="72" y="10" width="8" height="60" fill="#B87A14"/>
+        <rect x="84" y="10" width="4" height="60" fill="#B87A14"/>
+        <rect x="92" y="10" width="8" height="60" fill="#B87A14"/>
+        <rect x="104" y="10" width="4" height="60" fill="#B87A14"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="tabs">
+    <button class="tb on" onclick="sw('ficha',this)">Ficha técnica</button>
+    <button class="tb" onclick="sw('nutri',this)">Tabela nutricional</button>
+    <button class="tb" onclick="sw('preco',this)">Precificação</button>
+    <button class="tb" onclick="sw('barcode',this)">Código de barras</button>
+  </div>
+
+  <!-- FICHA TÉCNICA -->
+  <div class="sec on" id="s-ficha">
+    <div class="row2">
+      <div class="fg"><label>Nome técnico da receita</label><input type="text" placeholder="palha italiana ao leite condensado"/></div>
+      <div class="fg"><label>Nome fantasia</label><input type="text" placeholder="palha italiana original"/></div>
+    </div>
+    <div class="row2">
+      <div class="fg"><label>Tempo de preparo</label><input type="text" placeholder="45 minutos"/></div>
+      <div class="fg"><label>Rendimento</label><input type="text" placeholder="40 unidades de 25g"/></div>
+    </div>
+    <div class="row2">
+      <div class="fg"><label>Responsável técnico</label><input type="text" placeholder="seu nome"/></div>
+      <div class="fg"><label>Data de elaboração</label><input type="date"/></div>
+    </div>
+    <div style="margin-bottom:1rem">
+      <label style="margin-bottom:10px">Ingredientes</label>
+      <div class="row4h"><span>Ingrediente</span><span>Quantidade</span><span>Unidade</span><span></span></div>
+      <div id="fi-list">
+        <div class="row4"><input type="text" placeholder="leite condensado"/><input type="number" placeholder="395"/><select><option>g</option><option>ml</option><option>kg</option><option>l</option><option>unid</option><option>col. sopa</option><option>xícara</option></select><button class="xbtn" onclick="rmv(this)">×</button></div>
+        <div class="row4"><input type="text" placeholder="biscoito maisena"/><input type="number" placeholder="200"/><select><option>g</option><option>ml</option><option>kg</option><option>l</option><option>unid</option><option>col. sopa</option><option>xícara</option></select><button class="xbtn" onclick="rmv(this)">×</button></div>
+        <div class="row4"><input type="text" placeholder="manteiga"/><input type="number" placeholder="50"/><select><option>g</option><option>ml</option><option>kg</option><option>l</option><option>unid</option><option>col. sopa</option><option>xícara</option></select><button class="xbtn" onclick="rmv(this)">×</button></div>
+      </div>
+      <button class="addbtn" onclick="addFi()">+ adicionar ingrediente</button>
+    </div>
+    <hr class="hr"/>
+    <div class="fg"><label>Modo de preparo</label><textarea placeholder="Descreva o passo a passo detalhado da receita, incluindo temperaturas, tempos e técnicas..."></textarea></div>
+    <div class="fg"><label>Utensílios e equipamentos</label><input type="text" placeholder="ex: panela média, colher de madeira, assadeira 20x30cm, papel manteiga"/></div>
+    <div class="fg"><label>Conservação e validade</label><input type="text" placeholder="ex: conservar em local fresco e seco por até 7 dias"/></div>
+    <div class="fg"><label>Alergênicos</label><input type="text" placeholder="ex: contém leite e derivados, trigo (glúten)"/></div>
+    <button class="cta" onclick="window.print()">Imprimir ficha técnica</button>
+  </div>
+
+  <!-- TABELA NUTRICIONAL -->
+  <div class="sec" id="s-nutri">
+    <div class="row3">
+      <div><label>Ingrediente</label>
+        <select id="ni-sel">
+          <option value="lc">Leite condensado</option>
+          <option value="cl">Creme de leite</option>
+          <option value="mb">Manteiga com sal</option>
+          <option value="cp">Chocolate em pó 50%</option>
+          <option value="bm">Biscoito maisena</option>
+          <option value="at">Amendoim torrado</option>
+          <option value="cr">Coco ralado seco</option>
+          <option value="ar">Açúcar refinado</option>
+          <option value="li">Leite integral</option>
+          <option value="ft">Farinha de trigo</option>
+          <option value="ov">Ovo inteiro</option>
+          <option value="cal">Chocolate ao leite</option>
+          <option value="pac">Paçoca</option>
+          <option value="nv">Nata/chantilly</option>
+        </select>
+      </div>
+      <div><label>Qtd. usada (g/ml)</label><input type="number" id="ni-qty" placeholder="395" min="0"/></div>
+      <button onclick="addNi()" style="height:40px;background:var(--brand);color:white;border:none;border-radius:var(--radius);padding:0 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;margin-top:17px">Adicionar</button>
+    </div>
+    <div id="ni-list" style="margin-bottom:1rem"></div>
+    <div class="row2">
+      <div><label>Porção (g)</label><input type="number" id="ni-porc" value="25" min="1" oninput="calcN()"/></div>
+      <div><label>Nome da porção</label><input type="text" id="ni-pnome" value="1 unidade (25g)" oninput="calcN()"/></div>
+    </div>
+    <div id="ni-empty" class="empty">Adicione os ingredientes da sua receita para calcular a tabela nutricional</div>
+    <div id="ni-out" style="display:none">
+      <div class="nutri-box">
+        <div class="nb-title">Informação Nutricional</div>
+        <div class="nb-sub">Porção: <span id="n-p"></span></div>
+        <div class="nb-sub" style="margin-bottom:10px">% valores diários com base em dieta de 2.000 kcal ou 8.400 kJ</div>
+        <div class="nb-row hvy"><span>Valor energético</span><span id="n-kcal"></span></div>
+        <div class="nb-row hvy"><span>Carboidratos</span><span id="n-carb"></span></div>
+        <div class="nb-row hvy"><span>Proteínas</span><span id="n-prot"></span></div>
+        <div class="nb-row hvy"><span>Gorduras totais</span><span id="n-fat"></span></div>
+        <div class="nb-row sub"><span>Gorduras saturadas</span><span id="n-sf"></span></div>
+        <div class="nb-row sub"><span>Gorduras trans</span><span>0 g **</span></div>
+        <div class="nb-row hvy"><span>Fibra alimentar</span><span id="n-fib"></span></div>
+        <div class="nb-row hvy"><span>Sódio</span><span id="n-sod"></span></div>
+        <div class="nb-note">** não fornece quantidade significativa de gordura trans</div>
+      </div>
+      <p style="font-size:12px;color:var(--text-hint);margin-top:10px;line-height:1.6">Valores estimados com base na tabela TACO/IBGE. Para rotulagem fiscal obrigatória, recomenda-se análise laboratorial acreditada conforme RDC 429/2020.</p>
+      <button class="cta" onclick="window.print()">Imprimir tabela nutricional</button>
+    </div>
+  </div>
+
+  <!-- PRECIFICAÇÃO -->
+  <div class="sec" id="s-preco">
+    <div style="margin-bottom:1rem">
+      <label style="margin-bottom:10px">Ingredientes e insumos do lote</label>
+      <div class="row4h"><span>Ingrediente</span><span>Custo emb. (R$)</span><span>Gramas usadas</span><span></span></div>
+      <div id="pi-list">
+        <div class="row4" data-pi><input type="text" placeholder="leite condensado" oninput="calcP()"/><input type="number" placeholder="5.50" step="0.01" min="0" oninput="calcP()" data-ce/><input type="number" placeholder="395" min="0" oninput="calcP()" data-gu/><button class="xbtn" onclick="rmv(this);calcP()">×</button></div>
+        <div class="row4" data-pi><input type="text" placeholder="biscoito maisena" oninput="calcP()"/><input type="number" placeholder="3.20" step="0.01" min="0" oninput="calcP()" data-ce/><input type="number" placeholder="200" min="0" oninput="calcP()" data-gu/><button class="xbtn" onclick="rmv(this);calcP()">×</button></div>
+        <div class="row4" data-pi><input type="text" placeholder="manteiga" oninput="calcP()"/><input type="number" placeholder="8.90" step="0.01" min="0" oninput="calcP()" data-ce/><input type="number" placeholder="50" min="0" oninput="calcP()" data-gu/><button class="xbtn" onclick="rmv(this);calcP()">×</button></div>
+      </div>
+      <button class="addbtn" onclick="addPi()">+ adicionar ingrediente</button>
+    </div>
+    <hr class="hr"/>
+    <div class="row2">
+      <div class="fg"><label>Valor da hora de trabalho (R$)</label><input type="number" id="p-moh" value="15" step="0.5" min="0" oninput="calcP()"/></div>
+      <div class="fg"><label>Horas gastas neste lote</label><input type="number" id="p-hrs" value="1" step="0.5" min="0" oninput="calcP()"/></div>
+    </div>
+    <div class="row2">
+      <div class="fg"><label>Custos fixos mensais (R$)</label><input type="number" id="p-cfm" value="200" step="10" min="0" oninput="calcP()"/></div>
+      <div class="fg"><label>Total de unidades produzidas/mês</label><input type="number" id="p-unm" value="400" min="1" oninput="calcP()"/></div>
+    </div>
+    <div class="row2">
+      <div class="fg"><label>Unidades neste lote</label><input type="number" id="p-unl" value="40" min="1" oninput="calcP()"/></div>
+      <div class="fg"><label>Markup desejado (%)</label><input type="number" id="p-mk" value="100" step="5" min="0" oninput="calcP()"/></div>
+    </div>
+    <div class="res-box">
+      <div style="font-size:13px;font-weight:500;color:var(--text-sec);margin-bottom:1rem;text-transform:uppercase;letter-spacing:.03em">Resultado do lote</div>
+      <div class="metrics">
+        <div class="met"><div class="met-lbl">Custo de ingredientes</div><div class="met-val" id="r-i">R$ 0,00</div></div>
+        <div class="met"><div class="met-lbl">Mão de obra</div><div class="met-val" id="r-mo">R$ 0,00</div></div>
+        <div class="met"><div class="met-lbl">Rateio custos fixos</div><div class="met-val" id="r-cf">R$ 0,00</div></div>
+        <div class="met"><div class="met-lbl">Custo total do lote</div><div class="met-val" id="r-ct">R$ 0,00</div></div>
+        <div class="met"><div class="met-lbl">Custo por unidade</div><div class="met-val" id="r-cu">R$ 0,00</div></div>
+        <div class="met hl"><div class="met-lbl">Preço sugerido / unid.</div><div class="met-val amber" id="r-ps">R$ 0,00</div></div>
+      </div>
+      <div class="foot-row"><span style="color:var(--text-sec)">Faturamento potencial do lote</span><span id="r-fat" style="font-weight:500">R$ 0,00</span></div>
+      <div class="foot-row" style="border-top:none;padding-top:2px"><span style="color:var(--text-sec)">Lucro estimado do lote</span><span id="r-luc" style="font-weight:500;color:var(--success)">R$ 0,00</span></div>
+    </div>
+  </div>
+
+  <!-- CÓDIGO DE BARRAS -->
+  <div class="sec" id="s-barcode">
+    <div class="fg">
+      <label>Tipo de código de barras</label>
+      <div class="type-btns">
+        <button class="type-btn on" id="btn-ean13" onclick="setType('EAN13',this)">EAN-13<br><span style="font-size:11px;opacity:.7">varejo / supermercado</span></button>
+        <button class="type-btn" id="btn-ean8" onclick="setType('EAN8',this)">EAN-8<br><span style="font-size:11px;opacity:.7">embalagem pequena</span></button>
+        <button class="type-btn" id="btn-c128" onclick="setType('CODE128',this)">Code 128<br><span style="font-size:11px;opacity:.7">controle interno</span></button>
+      </div>
+    </div>
+    <div class="fg" id="ean-block">
+      <label id="bc-num-label">Número EAN-13 (13 dígitos)</label>
+      <input type="text" id="bc-number" placeholder="7891234567890" maxlength="13" oninput="updateBC()" style="letter-spacing:3px;font-size:16px;font-family:monospace"/>
+      <div style="font-size:12px;color:var(--text-hint);margin-top:5px" id="bc-hint">Digite os 12 primeiros dígitos. O 13º (verificador) é calculado automaticamente.</div>
+    </div>
+    <div class="fg" id="c128-block" style="display:none">
+      <label>Código interno (texto ou número)</label>
+      <input type="text" id="bc-c128" placeholder="PALHA-001" oninput="updateBC()" style="letter-spacing:2px;font-family:monospace"/>
+    </div>
+    <div class="row2">
+      <div class="fg"><label>Nome do produto</label><input type="text" id="bc-nome" placeholder="Palha Italiana Original" oninput="updateBC()"/></div>
+      <div class="fg"><label>Peso líquido</label><input type="text" id="bc-peso" placeholder="250g" oninput="updateBC()"/></div>
+    </div>
+    <div id="bc-empty" class="empty">Preencha os campos acima para gerar o código de barras</div>
+    <div id="bc-result" style="display:none">
+      <div class="bc-card">
+        <div style="font-size:13px;font-weight:500;color:var(--text-sec);margin-bottom:8px" id="bc-prod-name"></div>
+        <svg id="bc-svg" style="max-width:100%;height:auto"></svg>
+        <div style="font-size:12px;color:var(--text-hint);margin-top:6px" id="bc-peso-label"></div>
+        <div style="margin-top:8px" id="bc-valid-msg"></div>
+      </div>
+      <button class="cta" onclick="window.print()">Imprimir código de barras</button>
+    </div>
+    <div class="bc-tip">
+      <strong>EAN-13 para supermercados e conveniências:</strong> é necessário registro na GS1 Brasil (<a href="https://www.gs1br.org" target="_blank">gs1br.org</a>) para obter um prefixo oficial. A anuidade começa em R$ 340/ano para microempresas. O código gerado aqui serve para visualização e testes antes do registro.<br><br>
+      <strong>Code 128 para uso interno:</strong> não precisa de registro. Ideal para controle de lotes, estoque e pedidos nos seus pontos de venda.
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>RótulaFácil Pro &mdash; Ferramenta profissional para confeitaria artesanal</p>
+  <p style="margin-top:4px">Valores nutricionais calculados com base na tabela TACO/IBGE &mdash; <a href="https://rotulafacilpro.com.br">rotulafacilpro.com.br</a></p>
+</footer>
+
+<script>
+const DB={
+  lc:{nome:'Leite condensado',kcal:321,carb:54.3,prot:7.7,fat:8.7,sf:5.6,fib:0,sod:136},
+  cl:{nome:'Creme de leite',kcal:211,carb:3.4,prot:2.1,fat:21.5,sf:13.5,fib:0,sod:41},
+  mb:{nome:'Manteiga com sal',kcal:726,carb:0,prot:0.7,fat:81.8,sf:53.2,fib:0,sod:582},
+  cp:{nome:'Chocolate em pó 50%',kcal:377,carb:64.9,prot:18.5,fat:6.5,sf:3.8,fib:9,sod:10},
+  bm:{nome:'Biscoito maisena',kcal:465,carb:73.6,prot:7.5,fat:16.4,sf:4.3,fib:1.5,sod:283},
+  at:{nome:'Amendoim torrado',kcal:581,carb:19.6,prot:26,fat:47.5,sf:8.7,fib:5.4,sod:463},
+  cr:{nome:'Coco ralado seco',kcal:660,carb:6.1,prot:6.9,fat:66.2,sf:58.7,fib:12,sod:22},
+  ar:{nome:'Açúcar refinado',kcal:387,carb:99.7,prot:0,fat:0,sf:0,fib:0,sod:1},
+  li:{nome:'Leite integral',kcal:59,carb:4.5,prot:3,fat:3.2,sf:2,fib:0,sod:44},
+  ft:{nome:'Farinha de trigo',kcal:360,carb:75.1,prot:9.8,fat:1.4,sf:0.2,fib:2.3,sod:2},
+  ov:{nome:'Ovo inteiro',kcal:143,carb:0.6,prot:13,fat:9.5,sf:2.8,fib:0,sod:138},
+  cal:{nome:'Chocolate ao leite',kcal:538,carb:59.4,prot:6.7,fat:30.4,sf:18.2,fib:1.7,sod:67},
+  pac:{nome:'Paçoca',kcal:468,carb:59.2,prot:14.7,fat:20.9,sf:4,fib:3.1,sod:383},
+  nv:{nome:'Nata/chantilly',kcal:231,carb:2.9,prot:2.1,fat:23.8,sf:14.9,fib:0,sod:41}
+};
+const VD={kcal:2000,carb:300,prot:75,fat:55,sf:22,fib:25,sod:2400};
+let niList=[],bcType='EAN13';
+
+function sw(id,btn){
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
+  document.getElementById('s-'+id).classList.add('on');
+  btn.classList.add('on');
+}
+function rmv(btn){btn.closest('.row4').remove()}
+function addFi(){
+  const c=document.getElementById('fi-list');
+  const d=document.createElement('div');d.className='row4';
+  d.innerHTML='<input type="text" placeholder="ingrediente"/><input type="number" placeholder="0"/><select><option>g</option><option>ml</option><option>kg</option><option>l</option><option>unid</option><option>col. sopa</option><option>xícara</option></select><button class="xbtn" onclick="rmv(this)">×</button>';
+  c.appendChild(d);
+}
+function addNi(){
+  const k=document.getElementById('ni-sel').value;
+  const q=parseFloat(document.getElementById('ni-qty').value);
+  if(!q||q<=0)return;
+  niList.push({k,nome:DB[k].nome,q});
+  renderNi();calcN();
+  document.getElementById('ni-qty').value='';
+}
+function renderNi(){
+  const el=document.getElementById('ni-list');
+  el.innerHTML=niList.map((x,i)=>`<div class="chip"><span>${x.nome}</span><span style="color:var(--text-hint)">${x.q}g</span><button class="chip-x" onclick="rmNi(${i})">×</button></div>`).join('');
+}
+function rmNi(i){niList.splice(i,1);renderNi();calcN()}
+function calcN(){
+  const p=parseFloat(document.getElementById('ni-porc').value)||25;
+  const pn=document.getElementById('ni-pnome').value||p+'g';
+  if(!niList.length){document.getElementById('ni-out').style.display='none';document.getElementById('ni-empty').style.display='block';return}
+  let T={kcal:0,carb:0,prot:0,fat:0,sf:0,fib:0,sod:0},tw=0;
+  niList.forEach(x=>{const d=DB[x.k],f=x.q/100;Object.keys(T).forEach(k=>T[k]+=d[k]*f);tw+=x.q});
+  const f=p/tw;const R={};Object.keys(T).forEach(k=>R[k]=T[k]*f);
+  document.getElementById('ni-empty').style.display='none';
+  document.getElementById('ni-out').style.display='block';
+  document.getElementById('n-p').textContent=pn;
+  const vd=(v,k)=>Math.round(v/VD[k]*100);
+  document.getElementById('n-kcal').textContent=Math.round(R.kcal)+' kcal ('+Math.round(R.kcal*4.184)+' kJ) — '+vd(R.kcal,'kcal')+'% VD';
+  document.getElementById('n-carb').textContent=R.carb.toFixed(1)+'g — '+vd(R.carb,'carb')+'% VD';
+  document.getElementById('n-prot').textContent=R.prot.toFixed(1)+'g — '+vd(R.prot,'prot')+'% VD';
+  document.getElementById('n-fat').textContent=R.fat.toFixed(1)+'g — '+vd(R.fat,'fat')+'% VD';
+  document.getElementById('n-sf').textContent=R.sf.toFixed(1)+'g — '+vd(R.sf,'sf')+'% VD';
+  document.getElementById('n-fib').textContent=R.fib.toFixed(1)+'g — '+vd(R.fib,'fib')+'% VD';
+  document.getElementById('n-sod').textContent=Math.round(R.sod)+'mg — '+vd(R.sod,'sod')+'% VD';
+}
+function addPi(){
+  const c=document.getElementById('pi-list'),d=document.createElement('div');
+  d.className='row4';d.setAttribute('data-pi','');
+  d.innerHTML='<input type="text" placeholder="ingrediente" oninput="calcP()"/><input type="number" placeholder="0.00" step="0.01" min="0" oninput="calcP()" data-ce/><input type="number" placeholder="0" min="0" oninput="calcP()" data-gu/><button class="xbtn" onclick="rmv(this);calcP()">×</button>';
+  c.appendChild(d);
+}
+function calcP(){
+  let ci=0;
+  document.querySelectorAll('[data-pi]').forEach(r=>{ci+=(parseFloat(r.querySelector('[data-ce]').value)||0)});
+  const mo=(parseFloat(document.getElementById('p-moh').value)||0)*(parseFloat(document.getElementById('p-hrs').value)||0);
+  const cfm=parseFloat(document.getElementById('p-cfm').value)||0;
+  const unm=Math.max(parseFloat(document.getElementById('p-unm').value)||1,1);
+  const unl=Math.max(parseFloat(document.getElementById('p-unl').value)||1,1);
+  const mk=parseFloat(document.getElementById('p-mk').value)||0;
+  const rf=(cfm/unm)*unl;
+  const ct=ci+mo+rf;const cu=ct/unl;const ps=cu*(1+mk/100);const fat=ps*unl;const luc=fat-ct;
+  const f=v=>'R$ '+v.toFixed(2).replace('.',',');
+  document.getElementById('r-i').textContent=f(ci);
+  document.getElementById('r-mo').textContent=f(mo);
+  document.getElementById('r-cf').textContent=f(rf);
+  document.getElementById('r-ct').textContent=f(ct);
+  document.getElementById('r-cu').textContent=f(cu);
+  document.getElementById('r-ps').textContent=f(ps);
+  document.getElementById('r-fat').textContent=f(fat);
+  document.getElementById('r-luc').textContent=f(luc);
+}
+function setType(type,btn){
+  bcType=type;
+  document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  const isC128=type==='CODE128';
+  document.getElementById('ean-block').style.display=isC128?'none':'block';
+  document.getElementById('c128-block').style.display=isC128?'block':'none';
+  if(type==='EAN13'){document.getElementById('bc-num-label').textContent='Número EAN-13 (13 dígitos)';document.getElementById('bc-number').maxLength=13;document.getElementById('bc-number').placeholder='7891234567890';document.getElementById('bc-hint').textContent='Digite os 12 primeiros dígitos. O 13º (verificador) é calculado automaticamente.'}
+  if(type==='EAN8'){document.getElementById('bc-num-label').textContent='Número EAN-8 (8 dígitos)';document.getElementById('bc-number').maxLength=8;document.getElementById('bc-number').placeholder='78912345';document.getElementById('bc-hint').textContent='Digite os 7 primeiros dígitos. O 8º (verificador) é calculado automaticamente.'}
+  updateBC();
+}
+function calcEANCheck(digits){let sum=0;for(let i=0;i<digits.length;i++){sum+=parseInt(digits[i])*(i%2===0?1:3)}return(10-(sum%10))%10}
+function updateBC(){
+  const nome=document.getElementById('bc-nome').value;
+  const peso=document.getElementById('bc-peso').value;
+  const svg=document.getElementById('bc-svg');
+  const result=document.getElementById('bc-result');
+  const empty=document.getElementById('bc-empty');
+  let value='',msg='';
+  if(bcType==='CODE128'){
+    value=document.getElementById('bc-c128').value.trim();
+    if(!value){empty.style.display='block';result.style.display='none';return}
+  } else {
+    const raw=document.getElementById('bc-number').value.replace(/\D/g,'');
+    const len=bcType==='EAN13'?12:7;
+    const total=bcType==='EAN13'?13:8;
+    if(raw.length<1){empty.style.display='block';result.style.display='none';return}
+    if(raw.length>=len){
+      const check=calcEANCheck(raw.substring(0,len).split(''));
+      value=raw.substring(0,len)+check;
+      if(raw.length===total){const entered=parseInt(raw[len]);msg=entered===check?'<span style="color:var(--success);font-size:12px">Dígito verificador correto</span>':'<span style="color:var(--danger);font-size:12px">Dígito verificador incorreto — o correto é '+check+'</span>'}
+      else{msg='<span style="color:var(--text-hint);font-size:12px">Dígito verificador calculado: '+check+'</span>'}
+    } else {empty.style.display='block';result.style.display='none';return}
+  }
+  result.style.display='block';empty.style.display='none';
+  document.getElementById('bc-prod-name').textContent=nome||'';
+  document.getElementById('bc-peso-label').textContent=peso||'';
+  document.getElementById('bc-valid-msg').innerHTML=msg;
+  try{
+    JsBarcode(svg,value,{format:bcType,width:2,height:90,displayValue:true,fontSize:14,margin:12,background:'transparent',lineColor:'#1A1208'});
+  }catch(e){
+    svg.innerHTML='<text x="10" y="30" style="font-size:13px;fill:var(--danger)">Código inválido para o formato selecionado</text>';
+  }
+}
+calcP();
+</script>
+</body>
+</html>
