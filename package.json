@@ -1,0 +1,24 @@
+{
+  "name": "rotula-facil-pro",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @rotula-facil-pro/web --filter @rotula-facil-pro/api dev",
+    "dev:web": "pnpm --filter @rotula-facil-pro/web dev",
+    "dev:api": "pnpm --filter @rotula-facil-pro/api dev",
+    "build": "pnpm -r --if-present build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "pnpm --filter @rotula-facil-pro/web --filter @rotula-facil-pro/api --filter @rotula-facil-pro/db --filter @rotula-facil-pro/ui lint",
+    "format": "prettier --write .",
+    "prisma:generate": "pnpm --filter @rotula-facil-pro/db prisma:generate"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.33.0",
+    "eslint": "^9.33.0",
+    "globals": "^16.3.0",
+    "prettier": "^3.6.2",
+    "typescript": "^6.0.0",
+    "typescript-eslint": "^8.39.0"
+  }
+}

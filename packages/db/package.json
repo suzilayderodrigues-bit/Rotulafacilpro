@@ -1,0 +1,23 @@
+{
+  "name": "@rotula-facil-pro/db",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "prisma generate",
+    "lint": "eslint .",
+    "prisma:generate": "prisma generate",
+    "prisma:format": "prisma format",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@prisma/client": "^7.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "prisma": "^7.9.0",
+    "typescript": "^6.0.0"
+  },
+  "prisma": {
+    "schema": "prisma/schema.prisma"
+  }
+}
