@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Button, Input, Label } from "@/components/design-system";
+import { Button, Checkbox, Input, Label } from "@/components/design-system";
 import { AuthMessage, AuthShell } from "@/components/auth/auth-shell";
+import { PasswordField } from "@/components/auth/password-field";
 import { loginAction } from "@/lib/auth/actions";
 
 function firstValue(value: string | string[] | undefined) {
@@ -17,7 +18,7 @@ export default async function LoginPage({
   const status = firstValue(params.status);
 
   return (
-    <AuthShell title="Entrar" description="Acesse sua conta para validar a sessão do sistema.">
+    <AuthShell title="Entrar" description="Acesse sua conta para continuar no Rotula Fácil Pro.">
       {error && error !== "auth-required" ? (
         <AuthMessage type="error">E-mail ou senha inválidos.</AuthMessage>
       ) : null}
@@ -30,22 +31,24 @@ export default async function LoginPage({
           <Label htmlFor="email">E-mail</Label>
           <Input id="email" name="email" type="email" autoComplete="email" required />
         </div>
-        <div>
-          <Label htmlFor="password">Senha</Label>
-          <Input id="password" name="password" type="password" autoComplete="current-password" required />
+        <PasswordField id="password" name="password" label="Senha" autoComplete="current-password" required />
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <Checkbox label="Lembrar de mim" name="remember" className="accent-[var(--accent-orange)]" />
+          <Link className="font-semibold text-[var(--brand-petrol)] hover:text-[var(--accent-orange)]" href="/recuperar-senha">
+            Esqueci minha senha
+          </Link>
         </div>
         <Button type="submit" className="w-full">
           Entrar
         </Button>
       </form>
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm">
-        <Link className="font-semibold text-[var(--brand-petrol)] hover:text-[var(--brand-tiffany)]" href="/recuperar-senha">
-          Esqueci minha senha
-        </Link>
-        <Link className="font-semibold text-[var(--brand-petrol)] hover:text-[var(--brand-tiffany)]" href="/criar-conta">
+      <p className="mt-5 text-center text-sm text-[var(--muted)]">
+        Ainda não tem conta?{" "}
+        <Link className="font-semibold text-[var(--brand-petrol)] hover:text-[var(--accent-orange)]" href="/criar-conta">
           Criar conta
         </Link>
-      </div>
+      </p>
     </AuthShell>
   );
 }
+

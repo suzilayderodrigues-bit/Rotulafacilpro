@@ -23,7 +23,7 @@ export async function registerAction(formData: FormData) {
   }
 
   await createSession(result.user.id);
-  redirect("/acesso");
+  redirect("/dashboard");
 }
 
 export async function loginAction(formData: FormData) {
@@ -37,7 +37,7 @@ export async function loginAction(formData: FormData) {
   }
 
   await createSession(result.user.id);
-  redirect("/acesso");
+  redirect("/dashboard");
 }
 
 export async function requestPasswordResetAction(formData: FormData) {
@@ -56,3 +56,4 @@ export async function logoutAction() {
   await destroySession();
   redirect("/login?status=logged-out");
 }
+

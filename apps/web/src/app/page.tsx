@@ -73,7 +73,7 @@ export default function DesignSystemPage() {
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <Topbar />
-      <div className="flex">
+      <div className="flex flex-col lg:flex-row">
         <Sidebar />
         <div className="min-w-0 flex-1">
           <div className="mx-auto max-w-7xl px-5 py-8 lg:px-8">
@@ -343,3 +343,4 @@ export default function DesignSystemPage() {
     </main>
   );
 }
+

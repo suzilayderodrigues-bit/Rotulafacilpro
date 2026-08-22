@@ -36,9 +36,9 @@ export default async function RecoverPasswordPage({
           Solicitar recuperação
         </Button>
       </form>
-      <p className="mt-5 text-sm text-[var(--muted)]">
+      <p className="mt-5 text-center text-sm text-[var(--muted)]">
         Lembrou a senha?{" "}
-        <Link className="font-semibold text-[var(--brand-petrol)] hover:text-[var(--brand-tiffany)]" href="/login">
+        <Link className="font-semibold text-[var(--brand-petrol)] hover:text-[var(--accent-orange)]" href="/login">
           Voltar para login
         </Link>
       </p>

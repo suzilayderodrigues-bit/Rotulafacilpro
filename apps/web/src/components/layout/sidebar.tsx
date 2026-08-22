@@ -1,16 +1,20 @@
-import { BarChart3, FileText, Home, Menu, Package, Settings, Tags } from "lucide-react";
+import Link from "next/link";
+import { ClipboardList, Home, Menu, Package, Tags, UserCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
-  { label: "Início", icon: Home, active: true },
-  { label: "Rótulos", icon: Tags },
-  { label: "Produtos", icon: Package },
-  { label: "Relatórios", icon: BarChart3 },
-  { label: "Documentos", icon: FileText },
-  { label: "Configurações", icon: Settings }
+  { label: "Dashboard", href: "/dashboard", icon: Home },
+  { label: "Produtos", href: "/produtos", icon: Package },
+  { label: "Produções", href: "/producoes", icon: ClipboardList },
+  { label: "Etiquetas", href: "/etiquetas", icon: Tags },
+  { label: "Minha Conta", href: "/minha-conta", icon: UserCircle }
 ];
 
-export function Sidebar() {
+type SidebarProps = {
+  activeItem?: string;
+};
+
+export function Sidebar({ activeItem = "Dashboard" }: SidebarProps) {
   return (
     <>
       <div className="border-b border-[var(--border)] bg-white px-4 py-3 lg:hidden">
@@ -23,24 +27,27 @@ export function Sidebar() {
         </button>
       </div>
       <aside className="group hidden min-h-[calc(100vh-3.5rem)] w-16 shrink-0 border-r border-[var(--border)] bg-white transition-all duration-200 hover:w-56 lg:block">
-        <nav className="flex flex-col gap-1 p-2">
+        <nav className="flex flex-col gap-1 p-2" aria-label="Navegação principal">
           {items.map((item) => {
             const Icon = item.icon;
+            const isActive = item.label === activeItem;
+
             return (
-              <button
+              <Link
                 key={item.label}
-                type="button"
+                href={item.href}
+                aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex h-11 items-center gap-3 overflow-hidden rounded-[var(--radius-md)] border border-transparent px-3 text-sm font-semibold text-[var(--muted)] transition hover:border-[var(--border)] hover:text-[var(--brand-petrol)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-tiffany)]",
-                  item.active &&
-                    "border-[#b9e8ef] bg-[#e8f7fa] text-[var(--brand-petrol)] hover:border-[#b9e8ef]"
+                  "flex h-11 items-center gap-3 overflow-hidden rounded-[var(--radius-md)] border border-transparent px-3 text-sm font-semibold text-[var(--muted)] transition hover:border-[var(--border)] hover:bg-white hover:text-[var(--brand-petrol)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-tiffany)]",
+                  isActive &&
+                    "border-[#b9e8ef] bg-[#e8f7fa] text-[var(--brand-petrol)] hover:border-[#b9e8ef] hover:bg-[#e8f7fa]"
                 )}
               >
                 <Icon className="size-5 shrink-0" />
                 <span className="whitespace-nowrap opacity-0 transition-opacity group-hover:opacity-100">
                   {item.label}
                 </span>
-              </button>
+              </Link>
             );
           })}
         </nav>

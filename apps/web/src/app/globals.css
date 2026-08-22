@@ -15,6 +15,7 @@
   --brand-tiffany: #16a7b9;
   --brand-white: #ffffff;
   --brand-cyan: #00ffff;
+  --accent-orange: #f59e0b;
   --success: #1f8f62;
   --success-bg: #e9f8f1;
   --error: #c2413b;
@@ -56,3 +57,4 @@ select {
   background: rgba(22, 167, 185, 0.2);
   color: var(--brand-navy);
 }
+
