@@ -1,0 +1,28 @@
+{
+  "description": "Base Rotula v1 - bloco real inicial de Laticínios importado a partir do arquivo mestre base-rotula-v1.xlsx.xlsx.",
+  "importedCategory": "Laticínios",
+  "importedItems": [
+    "Leite integral líquido",
+    "Leite semidesnatado líquido",
+    "Leite desnatado líquido",
+    "Leite em pó integral",
+    "Leite em pó desnatado",
+    "Leite condensado",
+    "Creme de leite",
+    "Manteiga com sal",
+    "Manteiga sem sal",
+    "Requeijão",
+    "Cream cheese",
+    "Queijo muçarela",
+    "Queijo parmesão",
+    "Queijo prato",
+    "Queijo minas frescal"
+  ],
+  "rules": [
+    "Não pesquisar, inventar ou completar dados nutricionais.",
+    "Campos sem informação permanecem null ou omitidos.",
+    "Valor 0 representa somente zero informado pela fonte.",
+    "Rastreabilidade deve preservar dataOrigin, dataOriginUrl, sourceCode e sourceVersion da planilha."
+  ],
+  "itemsCount": 15
+}

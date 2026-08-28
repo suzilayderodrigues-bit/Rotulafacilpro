@@ -26,4 +26,5 @@ if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
 
-export type { User } from "@prisma/client";
+export type { Ingredient, IngredientBaseUnit, IngredientSource, Prisma, User } from "@prisma/client";
+

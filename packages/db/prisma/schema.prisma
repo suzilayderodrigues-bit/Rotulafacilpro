@@ -7,15 +7,16 @@ datasource db {
 }
 
 model User {
-  id           String               @id @default(cuid())
+  id           String   @id @default(cuid())
   name         String
-  email        String               @unique
+  email        String   @unique
   passwordHash String
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   sessions            Session[]
   passwordResetTokens PasswordResetToken[]
+  customIngredients   Ingredient[]
 
   @@map("users")
 }
@@ -47,4 +48,55 @@ model PasswordResetToken {
   @@index([userId])
   @@index([expiresAt])
   @@map("password_reset_tokens")
+}
+
+enum IngredientSource {
+  BASE_ROTULA
+  CUSTOM
+}
+
+enum IngredientBaseUnit {
+  GRAM
+  MILLILITER
+}
+
+model Ingredient {
+  id              String             @id @default(cuid())
+  name            String
+  normalizedName  String
+  source          IngredientSource
+  category        String
+  dataOrigin      String
+  dataOriginUrl   String?
+  sourceCode      String?
+  sourceVersion   String?
+  baseUnit        IngredientBaseUnit @default(GRAM)
+  baseQuantity    Decimal            @default(100) @db.Decimal(10, 2)
+  caloriesKcal    Decimal?           @db.Decimal(10, 2)
+  carbohydratesG  Decimal?           @db.Decimal(10, 2)
+  proteinsG       Decimal?           @db.Decimal(10, 2)
+  totalFatG       Decimal?           @db.Decimal(10, 2)
+  saturatedFatG   Decimal?           @db.Decimal(10, 2)
+  transFatG       Decimal?           @db.Decimal(10, 2)
+  fiberG          Decimal?           @db.Decimal(10, 2)
+  sodiumMg        Decimal?           @db.Decimal(10, 2)
+  sugarsG         Decimal?           @db.Decimal(10, 2)
+  addedSugarsG    Decimal?           @db.Decimal(10, 2)
+  calciumMg       Decimal?           @db.Decimal(10, 2)
+  ironMg          Decimal?           @db.Decimal(10, 2)
+  allergens       String[]           @default([])
+  containsGluten  Boolean?
+  containsLactose Boolean?
+  notes           String?
+  userId          String?
+  user            User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([source])
+  @@index([category])
+  @@index([userId])
+  @@index([normalizedName])
+  @@index([dataOrigin, sourceCode])
+  @@map("ingredients")
 }
