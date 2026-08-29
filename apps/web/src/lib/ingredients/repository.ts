@@ -10,16 +10,14 @@ const accessibleIngredientWhere = (userId: string): Prisma.IngredientWhereInput 
   ]
 });
 
-const baseRotulaIngredientWhere = ({
-  search,
-  category
-}: {
-  search?: string;
-  category?: string;
-} = {}): Prisma.IngredientWhereInput => ({
-  source: "BASE_ROTULA",
-  ...(category ? { category } : {}),
-  ...(search
+const normalizeSearch = (search: string) =>
+  search
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+const ingredientTextSearchWhere = (search?: string): Prisma.IngredientWhereInput =>
+  search
     ? {
         OR: [
           {
@@ -30,13 +28,40 @@ const baseRotulaIngredientWhere = ({
           },
           {
             normalizedName: {
-              contains: search.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(),
+              contains: normalizeSearch(search),
               mode: "insensitive"
             }
           }
         ]
       }
-    : {})
+    : {};
+
+const baseRotulaIngredientWhere = ({
+  search,
+  category
+}: {
+  search?: string;
+  category?: string;
+} = {}): Prisma.IngredientWhereInput => ({
+  source: "BASE_ROTULA",
+  ...(category ? { category } : {}),
+  ...ingredientTextSearchWhere(search)
+});
+
+const customIngredientWhere = (
+  userId: string,
+  {
+    search,
+    category
+  }: {
+    search?: string;
+    category?: string;
+  } = {}
+): Prisma.IngredientWhereInput => ({
+  source: "CUSTOM",
+  userId,
+  ...(category ? { category } : {}),
+  ...ingredientTextSearchWhere(search)
 });
 
 export type CreateCustomIngredientInput = Omit<
@@ -67,11 +92,33 @@ export function listBaseRotulaIngredients(filters?: { search?: string; category?
   });
 }
 
+export function listCustomIngredients(
+  userId: string,
+  filters?: { search?: string; category?: string }
+) {
+  return prisma.ingredient.findMany({
+    where: customIngredientWhere(userId, filters),
+    orderBy: {
+      name: "asc"
+    }
+  });
+}
+
 export function findBaseRotulaIngredient(ingredientId: string) {
   return prisma.ingredient.findFirst({
     where: {
       id: ingredientId,
       source: "BASE_ROTULA"
+    }
+  });
+}
+
+export function findCustomIngredient(userId: string, ingredientId: string) {
+  return prisma.ingredient.findFirst({
+    where: {
+      id: ingredientId,
+      source: "CUSTOM",
+      userId
     }
   });
 }
