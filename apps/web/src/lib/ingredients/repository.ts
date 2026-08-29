@@ -10,6 +10,35 @@ const accessibleIngredientWhere = (userId: string): Prisma.IngredientWhereInput 
   ]
 });
 
+const baseRotulaIngredientWhere = ({
+  search,
+  category
+}: {
+  search?: string;
+  category?: string;
+} = {}): Prisma.IngredientWhereInput => ({
+  source: "BASE_ROTULA",
+  ...(category ? { category } : {}),
+  ...(search
+    ? {
+        OR: [
+          {
+            name: {
+              contains: search,
+              mode: "insensitive"
+            }
+          },
+          {
+            normalizedName: {
+              contains: search.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(),
+              mode: "insensitive"
+            }
+          }
+        ]
+      }
+    : {})
+});
+
 export type CreateCustomIngredientInput = Omit<
   Prisma.IngredientUncheckedCreateInput,
   "id" | "source" | "userId" | "createdAt" | "updatedAt"
@@ -25,6 +54,24 @@ export function listAccessibleIngredients(userId: string) {
     where: accessibleIngredientWhere(userId),
     orderBy: {
       name: "asc"
+    }
+  });
+}
+
+export function listBaseRotulaIngredients(filters?: { search?: string; category?: string }) {
+  return prisma.ingredient.findMany({
+    where: baseRotulaIngredientWhere(filters),
+    orderBy: {
+      name: "asc"
+    }
+  });
+}
+
+export function findBaseRotulaIngredient(ingredientId: string) {
+  return prisma.ingredient.findFirst({
+    where: {
+      id: ingredientId,
+      source: "BASE_ROTULA"
     }
   });
 }

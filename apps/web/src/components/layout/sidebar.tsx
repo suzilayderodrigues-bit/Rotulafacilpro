@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { ClipboardList, Home, Menu, Package, Tags, UserCircle } from "lucide-react";
+import { ClipboardList, Database, Home, Menu, Package, Tags, UserCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
   { label: "Dashboard", href: "/dashboard", icon: Home },
   { label: "Produtos", href: "/produtos", icon: Package },
+  { label: "Ingredientes", href: "/ingredientes", icon: Database },
   { label: "Produções", href: "/producoes", icon: ClipboardList },
   { label: "Etiquetas", href: "/etiquetas", icon: Tags },
   { label: "Minha Conta", href: "/minha-conta", icon: UserCircle }
