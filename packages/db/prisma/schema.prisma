@@ -17,6 +17,7 @@ model User {
   sessions            Session[]
   passwordResetTokens PasswordResetToken[]
   customIngredients   Ingredient[]
+  recipes             Recipe[]
 
   @@map("users")
 }
@@ -60,6 +61,11 @@ enum IngredientBaseUnit {
   MILLILITER
 }
 
+enum RecipePhysicalState {
+  SOLID_OR_SEMISOLID
+  LIQUID
+}
+
 model Ingredient {
   id              String             @id @default(cuid())
   name            String
@@ -90,6 +96,7 @@ model Ingredient {
   notes           String?
   userId          String?
   user            User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipeItems     RecipeIngredient[]
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 
@@ -99,4 +106,43 @@ model Ingredient {
   @@index([normalizedName])
   @@index([dataOrigin, sourceCode])
   @@map("ingredients")
+}
+
+model Recipe {
+  id               String              @id @default(cuid())
+  userId           String
+  name             String
+  foodCategory     String?
+  physicalState    RecipePhysicalState
+  finalYieldAmount Decimal?            @db.Decimal(10, 2)
+  finalYieldUnit   IngredientBaseUnit
+  unitsProduced    Int?
+  unitWeight       Decimal?            @db.Decimal(10, 2)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredients RecipeIngredient[]
+
+  @@index([userId])
+  @@index([name])
+  @@map("recipes")
+}
+
+model RecipeIngredient {
+  id           String             @id @default(cuid())
+  recipeId     String
+  ingredientId String
+  amount       Decimal            @db.Decimal(10, 2)
+  unit         IngredientBaseUnit
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  recipe     Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@index([recipeId])
+  @@index([ingredientId])
+  @@unique([recipeId, ingredientId])
+  @@map("recipe_ingredients")
 }

@@ -62,7 +62,8 @@ const statusMessages: Record<string, string> = {
   updated: "Ingrediente atualizado com sucesso.",
   deleted: "Ingrediente excluído com sucesso.",
   invalid: "Revise os dados do ingrediente e tente novamente.",
-  denied: "Não foi possível realizar essa ação para este ingrediente."
+  denied: "Não foi possível realizar essa ação para este ingrediente.",
+  "in-use": "Este ingrediente está sendo usado em uma receita e não pode ser excluído."
 };
 
 function firstParam(value: string | string[] | undefined) {
@@ -411,4 +412,5 @@ export default async function IngredientsPage({ searchParams }: IngredientsPageP
     </main>
   );
 }
+
 

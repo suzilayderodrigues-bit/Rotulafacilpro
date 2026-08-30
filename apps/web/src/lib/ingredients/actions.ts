@@ -149,5 +149,6 @@ export async function deleteCustomIngredientAction(formData: FormData) {
   }
 
   const deleted = await deleteCustomIngredient(user.id, ingredientId);
-  redirectWithStatus(deleted.count === 0 ? "denied" : "deleted");
+  redirectWithStatus(deleted.count === 0 ? ("reason" in deleted && deleted.reason ? "in-use" : "denied") : "deleted");
 }
+

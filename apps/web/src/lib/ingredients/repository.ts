@@ -169,7 +169,24 @@ export async function updateCustomIngredient(
   });
 }
 
-export function deleteCustomIngredient(userId: string, ingredientId: string) {
+export async function deleteCustomIngredient(userId: string, ingredientId: string) {
+  const usageCount = await prisma.recipeIngredient.count({
+    where: {
+      ingredientId,
+      ingredient: {
+        source: "CUSTOM",
+        userId
+      }
+    }
+  });
+
+  if (usageCount > 0) {
+    return {
+      count: 0,
+      reason: "Este ingrediente está sendo usado em uma receita e não pode ser excluído."
+    };
+  }
+
   return prisma.ingredient.deleteMany({
     where: {
       id: ingredientId,
@@ -178,3 +195,4 @@ export function deleteCustomIngredient(userId: string, ingredientId: string) {
     }
   });
 }
+
