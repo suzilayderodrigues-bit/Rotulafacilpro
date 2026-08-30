@@ -1,4 +1,4 @@
-import { prisma, type Prisma } from "@rotula-facil-pro/db";
+﻿import { prisma, type Prisma } from "@rotula-facil-pro/db";
 import { findAccessibleIngredient } from "@/lib/ingredients/repository";
 import {
   assertMatchingIngredientUnit,
@@ -10,7 +10,7 @@ import {
 } from "./domain";
 
 export type CreateRecipeInput = RecipeInput;
-export type UpdateRecipeInput = Partial<RecipeInput> & Pick<RecipeInput, "physicalState" | "finalYieldUnit">;
+export type UpdateRecipeInput = Partial<RecipeInput>;
 
 const recipeInclude = {
   ingredients: {
@@ -66,10 +66,10 @@ export async function updateRecipe(userId: string, recipeId: string, input: Upda
   const data = validateRecipeInput({
     name: input.name ?? current.name,
     foodCategory: input.foodCategory === undefined ? current.foodCategory : input.foodCategory,
-    physicalState: input.physicalState,
+    physicalState: input.physicalState ?? current.physicalState,
     finalYieldAmount:
       input.finalYieldAmount === undefined ? current.finalYieldAmount?.toString() : input.finalYieldAmount,
-    finalYieldUnit: input.finalYieldUnit,
+    finalYieldUnit: input.finalYieldUnit ?? current.finalYieldUnit,
     unitsProduced: input.unitsProduced === undefined ? current.unitsProduced : input.unitsProduced,
     unitWeight: input.unitWeight === undefined ? current.unitWeight?.toString() : input.unitWeight
   });
@@ -125,6 +125,19 @@ export async function addRecipeIngredient(
 
   if (!ingredient) {
     throw new RecipeValidationError("ingredient-not-found");
+  }
+
+  const existingIngredient = await prisma.recipeIngredient.findUnique({
+    where: {
+      recipeId_ingredientId: {
+        recipeId: recipe.id,
+        ingredientId: ingredient.id
+      }
+    }
+  });
+
+  if (existingIngredient) {
+    throw new RecipeValidationError("duplicate-ingredient");
   }
 
   assertMatchingIngredientUnit(ingredient.baseUnit, data.unit);

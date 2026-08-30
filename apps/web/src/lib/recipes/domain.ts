@@ -1,4 +1,4 @@
-import type { IngredientBaseUnit, RecipePhysicalState } from "@rotula-facil-pro/db";
+﻿import type { IngredientBaseUnit, RecipePhysicalState } from "@rotula-facil-pro/db";
 
 export type RecipeInput = {
   name: string;
@@ -23,8 +23,10 @@ export type RecipeValidationErrorCode =
   | "invalid-final-yield"
   | "invalid-units-produced"
   | "invalid-unit-weight"
+  | "inconsistent-yield"
   | "invalid-amount"
   | "unit-mismatch"
+  | "duplicate-ingredient"
   | "recipe-not-found"
   | "ingredient-not-found";
 
@@ -33,6 +35,8 @@ export class RecipeValidationError extends Error {
     super(code);
   }
 }
+
+const YIELD_TOLERANCE = 0.01;
 
 function parseOptionalPositiveDecimal(
   value: number | string | null | undefined,
@@ -98,9 +102,75 @@ function validateYieldUnit(physicalState: RecipePhysicalState, unit: IngredientB
   return unit;
 }
 
+function valuesAreClose(left: number, right: number) {
+  return Math.abs(left - right) <= YIELD_TOLERANCE;
+}
+
+function nullableCount(values: Array<number | null>) {
+  return values.filter((value) => value === null).length;
+}
+
+export function resolveRecipeYieldValues(input: {
+  finalYieldAmount: number | null;
+  unitsProduced: number | null;
+  unitWeight: number | null;
+}) {
+  const { finalYieldAmount, unitsProduced, unitWeight } = input;
+  const missing = nullableCount([finalYieldAmount, unitsProduced, unitWeight]);
+
+  if (missing === 0) {
+    if (!valuesAreClose(finalYieldAmount!, unitsProduced! * unitWeight!)) {
+      throw new RecipeValidationError("inconsistent-yield");
+    }
+
+    return input;
+  }
+
+  if (missing !== 1) {
+    return input;
+  }
+
+  if (finalYieldAmount === null && unitsProduced !== null && unitWeight !== null) {
+    return {
+      finalYieldAmount: unitsProduced * unitWeight,
+      unitsProduced,
+      unitWeight
+    };
+  }
+
+  if (unitsProduced === null && finalYieldAmount !== null && unitWeight !== null) {
+    const calculatedUnits = finalYieldAmount / unitWeight;
+    const roundedUnits = Math.round(calculatedUnits);
+
+    if (!valuesAreClose(calculatedUnits, roundedUnits) || roundedUnits <= 0) {
+      throw new RecipeValidationError("inconsistent-yield");
+    }
+
+    return {
+      finalYieldAmount,
+      unitsProduced: roundedUnits,
+      unitWeight
+    };
+  }
+
+  if (unitWeight === null && finalYieldAmount !== null && unitsProduced !== null) {
+    return {
+      finalYieldAmount,
+      unitsProduced,
+      unitWeight: finalYieldAmount / unitsProduced
+    };
+  }
+
+  return input;
+}
+
 export function validateRecipeInput(input: RecipeInput) {
   const name = input.name.trim();
   const physicalState = validatePhysicalState(input.physicalState);
+  const finalYieldAmount = parseOptionalPositiveDecimal(input.finalYieldAmount, "invalid-final-yield");
+  const unitsProduced = parseOptionalPositiveInteger(input.unitsProduced, "invalid-units-produced");
+  const unitWeight = parseOptionalPositiveDecimal(input.unitWeight, "invalid-unit-weight");
+  const resolvedYield = resolveRecipeYieldValues({ finalYieldAmount, unitsProduced, unitWeight });
 
   if (!name) {
     throw new RecipeValidationError("name-required");
@@ -110,10 +180,8 @@ export function validateRecipeInput(input: RecipeInput) {
     name,
     foodCategory: input.foodCategory?.trim() || null,
     physicalState,
-    finalYieldAmount: parseOptionalPositiveDecimal(input.finalYieldAmount, "invalid-final-yield"),
-    finalYieldUnit: validateYieldUnit(physicalState, input.finalYieldUnit),
-    unitsProduced: parseOptionalPositiveInteger(input.unitsProduced, "invalid-units-produced"),
-    unitWeight: parseOptionalPositiveDecimal(input.unitWeight, "invalid-unit-weight")
+    ...resolvedYield,
+    finalYieldUnit: validateYieldUnit(physicalState, input.finalYieldUnit)
   };
 }
 
