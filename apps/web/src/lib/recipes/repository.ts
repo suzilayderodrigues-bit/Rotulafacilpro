@@ -26,7 +26,14 @@ const recipeInclude = {
 export function listRecipes(userId: string) {
   return prisma.recipe.findMany({
     where: { userId },
-    orderBy: { updatedAt: "desc" }
+    orderBy: { updatedAt: "desc" },
+    include: {
+      _count: {
+        select: {
+          ingredients: true
+        }
+      }
+    }
   });
 }
 
@@ -200,3 +207,4 @@ export function removeRecipeIngredient(userId: string, recipeIngredientId: strin
     }
   });
 }
+
