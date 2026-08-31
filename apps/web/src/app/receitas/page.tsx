@@ -1,4 +1,5 @@
-﻿import { BookOpen, MoreHorizontal, Pencil, Plus } from "lucide-react";
+﻿import Link from "next/link";
+import { BookOpen, MoreHorizontal, Pencil, Plus } from "lucide-react";
 import {
   Badge,
   Button,
@@ -14,6 +15,8 @@ import { requireUser } from "@/lib/auth/session";
 import { listRecipes } from "@/lib/recipes/repository";
 
 type RecipeListItem = Awaited<ReturnType<typeof listRecipes>>[number];
+
+const primaryLinkClasses = "inline-flex h-10 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--brand-tiffany)] bg-[var(--brand-tiffany)] px-4 text-sm font-semibold text-[var(--brand-navy)] transition hover:bg-[#1294a5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)] focus-visible:ring-offset-2";
 
 const labels = {
   title: "Receitas",
@@ -155,10 +158,10 @@ export default async function RecipesPage() {
                     {labels.support}
                   </p>
                 </div>
-                <Button type="button" className="w-full sm:w-auto" disabled>
+                <Link href="/receitas/nova" className={primaryLinkClasses + " w-full sm:w-auto"}>
                   <Plus className="size-4" />
                   Nova receita
-                </Button>
+                </Link>
               </div>
             </section>
 
@@ -184,10 +187,10 @@ export default async function RecipesPage() {
                   title={labels.emptyTitle}
                   description={labels.emptyDescription}
                   action={
-                    <Button type="button" disabled>
+                    <Link href="/receitas/nova" className={primaryLinkClasses}>
                       <Plus className="size-4" />
                       Cadastrar primeira receita
-                    </Button>
+                    </Link>
                   }
                 />
               )}
