@@ -51,6 +51,16 @@ export function findRecipe(userId: string, recipeId: string) {
   });
 }
 
+
+export function findRecipeForNutrition(userId: string, recipeId: string) {
+  return prisma.recipe.findFirst({
+    where: {
+      id: recipeId,
+      userId
+    },
+    include: recipeInclude
+  });
+}
 export function createRecipe(userId: string, input: CreateRecipeInput) {
   const data = validateRecipeInput(input);
 
@@ -264,4 +274,5 @@ export function removeRecipeIngredient(userId: string, recipeIngredientId: strin
     }
   });
 }
+
 
