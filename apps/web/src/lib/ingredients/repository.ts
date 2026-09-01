@@ -190,7 +190,7 @@ export async function deleteCustomIngredient(userId: string, ingredientId: strin
   if (usageCount > 0) {
     return {
       count: 0,
-      reason: "Este ingrediente estÃ¡ sendo usado em uma receita e nÃ£o pode ser excluÃ­do."
+      reason: "Este ingrediente está sendo usado em uma receita e não pode ser excluído."
     };
   }
 
