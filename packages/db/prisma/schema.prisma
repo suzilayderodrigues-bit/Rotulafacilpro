@@ -66,6 +66,18 @@ enum RecipePhysicalState {
   LIQUID
 }
 
+enum RecipeDisclosureStatus {
+  CONTAINS
+  DOES_NOT_CONTAIN
+  NEEDS_REVIEW
+}
+
+enum RecipeCrossContaminationRisk {
+  YES
+  NO
+  UNKNOWN
+}
+
 model Ingredient {
   id              String             @id @default(cuid())
   name            String
@@ -109,17 +121,23 @@ model Ingredient {
 }
 
 model Recipe {
-  id               String              @id @default(cuid())
-  userId           String
-  name             String
-  foodCategory     String?
-  physicalState    RecipePhysicalState
-  finalYieldAmount Decimal?            @db.Decimal(10, 2)
-  finalYieldUnit   IngredientBaseUnit
-  unitsProduced    Int?
-  unitWeight       Decimal?            @db.Decimal(10, 2)
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
+  id                          String                        @id @default(cuid())
+  userId                      String
+  name                        String
+  foodCategory                String?
+  physicalState               RecipePhysicalState
+  finalYieldAmount            Decimal?                      @db.Decimal(10, 2)
+  finalYieldUnit              IngredientBaseUnit
+  unitsProduced               Int?
+  unitWeight                  Decimal?                      @db.Decimal(10, 2)
+  confirmedAllergens          String[]                      @default([])
+  glutenStatus                RecipeDisclosureStatus?
+  lactoseStatus               RecipeDisclosureStatus?
+  crossContaminationRisk      RecipeCrossContaminationRisk?
+  crossContaminationAllergens String[]                      @default([])
+  informationReviewedAt       DateTime?
+  createdAt                   DateTime                      @default(now())
+  updatedAt                   DateTime                      @updatedAt
 
   user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   ingredients RecipeIngredient[]
@@ -141,8 +159,8 @@ model RecipeIngredient {
   recipe     Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
 
+  @@unique([recipeId, ingredientId])
   @@index([recipeId])
   @@index([ingredientId])
-  @@unique([recipeId, ingredientId])
   @@map("recipe_ingredients")
 }

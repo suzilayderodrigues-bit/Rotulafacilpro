@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { type IngredientBaseUnit, type RecipePhysicalState } from "@rotula-facil-pro/db";
 import { requireUser } from "@/lib/auth/session";
 import { RecipeValidationError } from "./domain";
-import { addRecipeIngredient, createRecipe, removeRecipeIngredient, updateRecipeYield } from "./repository";
+import { addRecipeIngredient, createRecipe, removeRecipeIngredient, updateRecipeInformation, updateRecipeYield } from "./repository";
 
 function formString(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -41,6 +41,16 @@ function ingredientErrorParam(error: unknown) {
     if (error.code === "unit-mismatch") return "unidade";
     if (error.code === "recipe-not-found") return "receita";
     if (error.code === "ingredient-not-found") return "ingrediente";
+  }
+
+  return "formulario";
+}
+
+function informationErrorParam(error: unknown) {
+  if (error instanceof RecipeValidationError) {
+    if (error.code === "missing-review-confirmation") return "revisao";
+    if (error.code === "invalid-information") return "informacoes";
+    if (error.code === "recipe-not-found") return "receita";
   }
 
   return "formulario";
@@ -156,4 +166,30 @@ export async function updateRecipeYieldAction(formData: FormData) {
   }
 
   redirect("/receitas/" + recipeId + "/informacoes");
+}
+
+export async function updateRecipeInformationAction(formData: FormData) {
+  const user = await requireUser();
+  const recipeId = formString(formData, "recipeId");
+  const selectedAllergens = formData.getAll("confirmedAllergens").filter((value): value is string => typeof value === "string");
+
+  if (!recipeId) {
+    redirect("/receitas?erro=formulario");
+  }
+
+  try {
+    await updateRecipeInformation(user.id, recipeId, {
+      confirmedAllergens: selectedAllergens,
+      additionalAllergens: formString(formData, "additionalAllergens"),
+      glutenStatus: formString(formData, "glutenStatus"),
+      lactoseStatus: formString(formData, "lactoseStatus"),
+      crossContaminationRisk: formString(formData, "crossContaminationRisk"),
+      crossContaminationAllergens: formString(formData, "crossContaminationAllergens"),
+      reviewed: formString(formData, "reviewed")
+    });
+  } catch (error) {
+    redirect("/receitas/" + recipeId + "/informacoes?status=" + informationErrorParam(error));
+  }
+
+  redirect("/receitas/" + recipeId);
 }

@@ -1,4 +1,9 @@
-import type { IngredientBaseUnit, RecipePhysicalState } from "@rotula-facil-pro/db";
+import type {
+  IngredientBaseUnit,
+  RecipeCrossContaminationRisk,
+  RecipeDisclosureStatus,
+  RecipePhysicalState
+} from "@rotula-facil-pro/db";
 
 export type RecipeYieldInput = {
   finalYieldAmount?: number | string | null;
@@ -19,6 +24,16 @@ export type RecipeIngredientInput = {
   unit: IngredientBaseUnit;
 };
 
+export type RecipeInformationInput = {
+  confirmedAllergens?: string[] | string | null;
+  additionalAllergens?: string | null;
+  glutenStatus?: string | null;
+  lactoseStatus?: string | null;
+  crossContaminationRisk?: string | null;
+  crossContaminationAllergens?: string | null;
+  reviewed?: string | boolean | null;
+};
+
 export type RecipeValidationErrorCode =
   | "name-required"
   | "invalid-physical-state"
@@ -28,6 +43,8 @@ export type RecipeValidationErrorCode =
   | "invalid-unit-weight"
   | "inconsistent-yield"
   | "recipe-has-no-ingredients"
+  | "invalid-information"
+  | "missing-review-confirmation"
   | "invalid-amount"
   | "unit-mismatch"
   | "duplicate-ingredient"
@@ -41,6 +58,8 @@ export class RecipeValidationError extends Error {
 }
 
 const YIELD_TOLERANCE = 0.01;
+const DISCLOSURE_STATUSES = ["CONTAINS", "DOES_NOT_CONTAIN", "NEEDS_REVIEW"] as const;
+const CROSS_CONTAMINATION_RISKS = ["YES", "NO", "UNKNOWN"] as const;
 
 function parseOptionalPositiveDecimal(
   value: number | string | null | undefined,
@@ -112,6 +131,38 @@ function valuesAreClose(left: number, right: number) {
 
 function nullableCount(values: Array<number | null>) {
   return values.filter((value) => value === null).length;
+}
+
+function normalizeTextList(values: Array<string | null | undefined>) {
+  return Array.from(
+    new Set(
+      values
+        .flatMap((value) => (value ?? "").split(","))
+        .map((value) => value.trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+function normalizeFormList(value: string[] | string | null | undefined) {
+  if (Array.isArray(value)) return normalizeTextList(value);
+  return normalizeTextList([value]);
+}
+
+function validateDisclosureStatus(value: string | null | undefined): RecipeDisclosureStatus {
+  if (DISCLOSURE_STATUSES.includes(value as RecipeDisclosureStatus)) {
+    return value as RecipeDisclosureStatus;
+  }
+
+  throw new RecipeValidationError("invalid-information");
+}
+
+function validateCrossContaminationRisk(value: string | null | undefined): RecipeCrossContaminationRisk {
+  if (CROSS_CONTAMINATION_RISKS.includes(value as RecipeCrossContaminationRisk)) {
+    return value as RecipeCrossContaminationRisk;
+  }
+
+  throw new RecipeValidationError("invalid-information");
 }
 
 export function resolveRecipeYieldValues(input: {
@@ -191,6 +242,28 @@ export function validateRecipeInput(input: RecipeInput) {
     physicalState,
     ...resolvedYield,
     finalYieldUnit: validateYieldUnit(physicalState, input.finalYieldUnit)
+  };
+}
+
+export function validateRecipeInformationInput(input: RecipeInformationInput) {
+  if (input.reviewed !== true && input.reviewed !== "on") {
+    throw new RecipeValidationError("missing-review-confirmation");
+  }
+
+  const confirmedAllergens = normalizeTextList([
+    ...normalizeFormList(input.confirmedAllergens),
+    input.additionalAllergens
+  ]);
+  const crossContaminationRisk = validateCrossContaminationRisk(input.crossContaminationRisk);
+
+  return {
+    confirmedAllergens,
+    glutenStatus: validateDisclosureStatus(input.glutenStatus),
+    lactoseStatus: validateDisclosureStatus(input.lactoseStatus),
+    crossContaminationRisk,
+    crossContaminationAllergens:
+      crossContaminationRisk === "YES" ? normalizeTextList([input.crossContaminationAllergens]) : [],
+    informationReviewedAt: new Date()
   };
 }
 

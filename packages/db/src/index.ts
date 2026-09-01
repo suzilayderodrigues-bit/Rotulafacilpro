@@ -32,7 +32,10 @@ export type {
   IngredientSource,
   Prisma,
   Recipe,
+  RecipeCrossContaminationRisk,
+  RecipeDisclosureStatus,
   RecipeIngredient,
   RecipePhysicalState,
   User
 } from "@prisma/client";
+
