@@ -1,4 +1,4 @@
-import { prisma, type Prisma } from "@rotula-facil-pro/db";
+﻿import { prisma, type Prisma } from "@rotula-facil-pro/db";
 
 const accessibleIngredientWhere = (userId: string): Prisma.IngredientWhereInput => ({
   OR: [
@@ -74,9 +74,16 @@ export type UpdateCustomIngredientInput = Omit<
   "id" | "source" | "userId" | "createdAt" | "updatedAt"
 >;
 
-export function listAccessibleIngredients(userId: string) {
+export function listAccessibleIngredients(userId: string, filters?: { search?: string }) {
+  const accessWhere = accessibleIngredientWhere(userId);
+  const searchWhere = ingredientTextSearchWhere(filters?.search);
+
   return prisma.ingredient.findMany({
-    where: accessibleIngredientWhere(userId),
+    where: filters?.search
+      ? {
+          AND: [accessWhere, searchWhere]
+        }
+      : accessWhere,
     orderBy: {
       name: "asc"
     }
@@ -183,7 +190,7 @@ export async function deleteCustomIngredient(userId: string, ingredientId: strin
   if (usageCount > 0) {
     return {
       count: 0,
-      reason: "Este ingrediente está sendo usado em uma receita e não pode ser excluído."
+      reason: "Este ingrediente estÃ¡ sendo usado em uma receita e nÃ£o pode ser excluÃ­do."
     };
   }
 
@@ -195,4 +202,6 @@ export async function deleteCustomIngredient(userId: string, ingredientId: strin
     }
   });
 }
+
+
 
