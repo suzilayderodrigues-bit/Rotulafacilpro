@@ -1,12 +1,14 @@
-﻿import { prisma, type Prisma } from "@rotula-facil-pro/db";
+import { prisma, type Prisma } from "@rotula-facil-pro/db";
 import { findAccessibleIngredient } from "@/lib/ingredients/repository";
 import {
   assertMatchingIngredientUnit,
   RecipeValidationError,
   validateRecipeIngredientInput,
   validateRecipeInput,
+  validateRecipeYieldInput,
   type RecipeIngredientInput,
-  type RecipeInput
+  type RecipeInput,
+  type RecipeYieldInput
 } from "./domain";
 
 export type CreateRecipeInput = RecipeInput;
@@ -84,6 +86,40 @@ export async function updateRecipe(userId: string, recipeId: string, input: Upda
   return prisma.recipe.update({
     where: { id: current.id },
     data
+  });
+}
+
+export async function updateRecipeYield(userId: string, recipeId: string, input: RecipeYieldInput) {
+  const current = await prisma.recipe.findFirst({
+    where: {
+      id: recipeId,
+      userId
+    },
+    include: {
+      _count: {
+        select: {
+          ingredients: true
+        }
+      }
+    }
+  });
+
+  if (!current) {
+    throw new RecipeValidationError("recipe-not-found");
+  }
+
+  if (current._count.ingredients === 0) {
+    throw new RecipeValidationError("recipe-has-no-ingredients");
+  }
+
+  const data = validateRecipeYieldInput(input);
+
+  return prisma.recipe.update({
+    where: { id: current.id },
+    data: {
+      ...data,
+      finalYieldUnit: current.physicalState === "LIQUID" ? "MILLILITER" : "GRAM"
+    }
   });
 }
 
@@ -207,4 +243,3 @@ export function removeRecipeIngredient(userId: string, recipeIngredientId: strin
     }
   });
 }
-

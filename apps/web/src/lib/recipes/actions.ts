@@ -1,10 +1,10 @@
-﻿"use server";
+"use server";
 
 import { redirect } from "next/navigation";
 import { type IngredientBaseUnit, type RecipePhysicalState } from "@rotula-facil-pro/db";
 import { requireUser } from "@/lib/auth/session";
 import { RecipeValidationError } from "./domain";
-import { addRecipeIngredient, createRecipe, removeRecipeIngredient } from "./repository";
+import { addRecipeIngredient, createRecipe, removeRecipeIngredient, updateRecipeYield } from "./repository";
 
 function formString(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -46,8 +46,25 @@ function ingredientErrorParam(error: unknown) {
   return "formulario";
 }
 
+function yieldErrorParam(error: unknown) {
+  if (error instanceof RecipeValidationError) {
+    if (error.code === "invalid-final-yield") return "rendimento";
+    if (error.code === "invalid-units-produced") return "unidades";
+    if (error.code === "invalid-unit-weight") return "peso-unidade";
+    if (error.code === "inconsistent-yield") return "incoerente";
+    if (error.code === "recipe-has-no-ingredients") return "sem-ingredientes";
+    if (error.code === "recipe-not-found") return "receita";
+  }
+
+  return "formulario";
+}
+
 function recipeIngredientsHref(recipeId: string, status?: string) {
   return status ? "/receitas/" + recipeId + "/ingredientes?status=" + status : "/receitas/" + recipeId + "/ingredientes";
+}
+
+function recipeYieldHref(recipeId: string, status?: string) {
+  return status ? "/receitas/" + recipeId + "/rendimento?status=" + status : "/receitas/" + recipeId + "/rendimento";
 }
 
 export async function createRecipeProductAction(formData: FormData) {
@@ -118,4 +135,25 @@ export async function removeRecipeIngredientAction(formData: FormData) {
 
   const removed = await removeRecipeIngredient(user.id, recipeIngredientId);
   redirect(recipeIngredientsHref(recipeId, removed.count === 0 ? "receita" : "removido"));
+}
+
+export async function updateRecipeYieldAction(formData: FormData) {
+  const user = await requireUser();
+  const recipeId = formString(formData, "recipeId");
+
+  if (!recipeId) {
+    redirect("/receitas?erro=formulario");
+  }
+
+  try {
+    await updateRecipeYield(user.id, recipeId, {
+      finalYieldAmount: formString(formData, "finalYieldAmount"),
+      unitsProduced: formString(formData, "unitsProduced"),
+      unitWeight: formString(formData, "unitWeight")
+    });
+  } catch (error) {
+    redirect(recipeYieldHref(recipeId, yieldErrorParam(error)));
+  }
+
+  redirect("/receitas/" + recipeId + "/informacoes");
 }

@@ -1,13 +1,16 @@
-﻿import type { IngredientBaseUnit, RecipePhysicalState } from "@rotula-facil-pro/db";
+import type { IngredientBaseUnit, RecipePhysicalState } from "@rotula-facil-pro/db";
 
-export type RecipeInput = {
+export type RecipeYieldInput = {
+  finalYieldAmount?: number | string | null;
+  unitsProduced?: number | string | null;
+  unitWeight?: number | string | null;
+};
+
+export type RecipeInput = RecipeYieldInput & {
   name: string;
   foodCategory?: string | null;
   physicalState: RecipePhysicalState;
-  finalYieldAmount?: number | string | null;
   finalYieldUnit: IngredientBaseUnit;
-  unitsProduced?: number | string | null;
-  unitWeight?: number | string | null;
 };
 
 export type RecipeIngredientInput = {
@@ -24,6 +27,7 @@ export type RecipeValidationErrorCode =
   | "invalid-units-produced"
   | "invalid-unit-weight"
   | "inconsistent-yield"
+  | "recipe-has-no-ingredients"
   | "invalid-amount"
   | "unit-mismatch"
   | "duplicate-ingredient"
@@ -164,13 +168,18 @@ export function resolveRecipeYieldValues(input: {
   return input;
 }
 
-export function validateRecipeInput(input: RecipeInput) {
-  const name = input.name.trim();
-  const physicalState = validatePhysicalState(input.physicalState);
+export function validateRecipeYieldInput(input: RecipeYieldInput) {
   const finalYieldAmount = parseOptionalPositiveDecimal(input.finalYieldAmount, "invalid-final-yield");
   const unitsProduced = parseOptionalPositiveInteger(input.unitsProduced, "invalid-units-produced");
   const unitWeight = parseOptionalPositiveDecimal(input.unitWeight, "invalid-unit-weight");
-  const resolvedYield = resolveRecipeYieldValues({ finalYieldAmount, unitsProduced, unitWeight });
+
+  return resolveRecipeYieldValues({ finalYieldAmount, unitsProduced, unitWeight });
+}
+
+export function validateRecipeInput(input: RecipeInput) {
+  const name = input.name.trim();
+  const physicalState = validatePhysicalState(input.physicalState);
+  const resolvedYield = validateRecipeYieldInput(input);
 
   if (!name) {
     throw new RecipeValidationError("name-required");
