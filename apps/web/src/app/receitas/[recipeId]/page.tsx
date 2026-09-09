@@ -1,14 +1,41 @@
 import Link from "next/link";
-import { Edit3, FlaskConical, Lock, Scale } from "lucide-react";
+import { AlertCircle, Edit3, FlaskConical, Lock, Scale } from "lucide-react";
 import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, EmptyState } from "@/components/design-system";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { requireUser } from "@/lib/auth/session";
-import { findRecipe } from "@/lib/recipes/repository";
+import {
+  calculateRecipeNutrition,
+  NutritionCalculationError,
+  type NutritionCalculationResult,
+  type NutritionNutrientField
+} from "@/lib/nutrition";
+import { findRecipeForNutrition } from "@/lib/recipes/repository";
 
 type RecipeSummaryPageProps = {
   params: Promise<{ recipeId: string }>;
 };
+
+type NutrientPresentation = {
+  field: NutritionNutrientField;
+  label: string;
+  unit: "kcal" | "g" | "mg";
+};
+
+const nutrientPresentation: NutrientPresentation[] = [
+  { field: "caloriesKcal", label: "Valor energético", unit: "kcal" },
+  { field: "carbohydratesG", label: "Carboidratos", unit: "g" },
+  { field: "proteinsG", label: "Proteínas", unit: "g" },
+  { field: "totalFatG", label: "Gorduras totais", unit: "g" },
+  { field: "saturatedFatG", label: "Gorduras saturadas", unit: "g" },
+  { field: "transFatG", label: "Gorduras trans", unit: "g" },
+  { field: "fiberG", label: "Fibras alimentares", unit: "g" },
+  { field: "sodiumMg", label: "Sódio", unit: "mg" },
+  { field: "sugarsG", label: "Açúcares totais", unit: "g" },
+  { field: "addedSugarsG", label: "Açúcares adicionados", unit: "g" },
+  { field: "calciumMg", label: "Cálcio", unit: "mg" },
+  { field: "ironMg", label: "Ferro", unit: "mg" }
+];
 
 function physicalStateLabel(value: string) {
   return value === "LIQUID" ? "Líquido" : "Sólido ou semissólido";
@@ -18,12 +45,31 @@ function unitLabel(value: string) {
   return value === "MILLILITER" ? "ml" : "g";
 }
 
+function basisLabel(value: NutritionCalculationResult["basis"]) {
+  return value === "100ml" ? "Por 100 ml" : "Por 100 g";
+}
+
 function formatDecimal(value: unknown) {
   if (value === null || value === undefined) return "Não informado";
   const numberValue = Number(value);
   if (!Number.isFinite(numberValue)) return "Não informado";
 
   return numberValue.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+}
+
+function formatNutrientValue(value: number, unit: NutrientPresentation["unit"]) {
+  const formatted = value.toLocaleString("pt-BR", {
+    maximumFractionDigits: unit === "kcal" ? 0 : 2,
+    minimumFractionDigits: 0
+  });
+
+  return formatted + ' ' + unit;
+}
+
+function nutrientCell(value: number | null, unit: NutrientPresentation["unit"], isComplete: boolean) {
+  if (!isComplete || value === null) return "Não disponível";
+
+  return formatNutrientValue(value, unit);
 }
 
 function disclosureLabel(value: string | null) {
@@ -40,10 +86,111 @@ function crossContaminationLabel(value: string | null) {
   return "Não revisado";
 }
 
+function NutritionUnavailable({ message }: { message: string }) {
+  return (
+    <Card className="mt-5 shadow-none">
+      <CardHeader className="flex-col">
+        <div className="flex size-10 items-center justify-center rounded-[var(--radius-md)] bg-[#fff8f0] text-[var(--accent-orange)]">
+          <AlertCircle className="size-5" />
+        </div>
+        <div>
+          <CardTitle>Prévia nutricional da receita</CardTitle>
+          <CardDescription>{message}</CardDescription>
+        </div>
+      </CardHeader>
+    </Card>
+  );
+}
+
+function NutritionPreview({ result }: { result: NutritionCalculationResult }) {
+  const hasIncompleteValues = nutrientPresentation.some((item) => !result.nutrients[item.field].isComplete);
+  const showPerUnit = result.unitWeight !== null;
+
+  return (
+    <Card className="mt-5 shadow-none">
+      <CardHeader className="flex-col">
+        <div className="flex size-10 items-center justify-center rounded-[var(--radius-md)] bg-[#e8f7fa] text-[var(--brand-petrol)]">
+          <FlaskConical className="size-5" />
+        </div>
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle>Prévia nutricional da receita</CardTitle>
+            <Badge variant="secondary">Prévia técnica</Badge>
+          </div>
+          <CardDescription>Valores calculados a partir dos ingredientes e do rendimento informado.</CardDescription>
+        </div>
+      </CardHeader>
+
+      <div className="rounded-[var(--radius-md)] border border-[#f4d5b6] bg-[#fff8f0] px-4 py-3 text-sm leading-6 text-[#8a4b15]">
+        Ainda não é a tabela nutricional final.
+        {hasIncompleteValues ? " Alguns valores ainda não estão disponíveis na base nutricional." : ""}
+      </div>
+
+      <div className="mt-4 hidden overflow-hidden rounded-[var(--radius-md)] border border-[var(--border)] md:block">
+        <table className="w-full border-collapse text-left text-sm">
+          <thead className="bg-[var(--surface-muted)] text-xs font-semibold uppercase tracking-normal text-[var(--muted)]">
+            <tr>
+              <th className="px-4 py-3">Nutriente</th>
+              <th className="px-4 py-3">Total da receita</th>
+              <th className="px-4 py-3">{basisLabel(result.basis)}</th>
+              {showPerUnit ? <th className="px-4 py-3">Por unidade</th> : null}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[var(--border)] bg-white">
+            {nutrientPresentation.map((item) => {
+              const nutrient = result.nutrients[item.field];
+
+              return (
+                <tr key={item.field}>
+                  <td className="px-4 py-3 font-medium text-[var(--foreground)]">{item.label}</td>
+                  <td className="px-4 py-3 text-[var(--muted)]">{nutrientCell(nutrient.recipeTotal, item.unit, nutrient.isComplete)}</td>
+                  <td className="px-4 py-3 text-[var(--muted)]">{nutrientCell(nutrient.per100, item.unit, nutrient.isComplete)}</td>
+                  {showPerUnit ? <td className="px-4 py-3 text-[var(--muted)]">{nutrientCell(nutrient.perUnit, item.unit, nutrient.isComplete)}</td> : null}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:hidden">
+        {nutrientPresentation.map((item) => {
+          const nutrient = result.nutrients[item.field];
+
+          return (
+            <div key={item.field} className="rounded-[var(--radius-md)] border border-[var(--border)] bg-white p-4">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="text-sm font-semibold text-[var(--foreground)]">{item.label}</h3>
+                {!nutrient.isComplete ? <Badge variant="secondary">Base incompleta</Badge> : null}
+              </div>
+              <dl className="mt-3 grid gap-2 text-sm">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-[var(--muted)]">Total</dt>
+                  <dd className="text-right text-[var(--foreground)]">{nutrientCell(nutrient.recipeTotal, item.unit, nutrient.isComplete)}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-[var(--muted)]">{basisLabel(result.basis)}</dt>
+                  <dd className="text-right text-[var(--foreground)]">{nutrientCell(nutrient.per100, item.unit, nutrient.isComplete)}</dd>
+                </div>
+                {showPerUnit ? (
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-[var(--muted)]">Por unidade</dt>
+                    <dd className="text-right text-[var(--foreground)]">{nutrientCell(nutrient.perUnit, item.unit, nutrient.isComplete)}</dd>
+                  </div>
+                ) : null}
+              </dl>
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
 export default async function RecipeSummaryPage({ params }: RecipeSummaryPageProps) {
   const user = await requireUser();
   const { recipeId } = await params;
-  const recipe = await findRecipe(user.id, recipeId);
+  const recipe = await findRecipeForNutrition(user.id, recipeId);
 
   if (!recipe) {
     return (
@@ -70,6 +217,16 @@ export default async function RecipeSummaryPage({ params }: RecipeSummaryPagePro
   }
 
   const unit = unitLabel(recipe.finalYieldUnit);
+  let nutritionResult: NutritionCalculationResult | null = null;
+  const nutritionMessage = "A prévia será exibida quando a receita tiver ingredientes e rendimento final válido.";
+
+  try {
+    nutritionResult = calculateRecipeNutrition(recipe);
+  } catch (error) {
+    if (!(error instanceof NutritionCalculationError)) {
+      throw error;
+    }
+  }
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
@@ -147,6 +304,8 @@ export default async function RecipeSummaryPage({ params }: RecipeSummaryPagePro
               </Card>
             </div>
 
+            {nutritionResult ? <NutritionPreview result={nutritionResult} /> : <NutritionUnavailable message={nutritionMessage} />}
+
             <Card className="mt-5 shadow-none">
               <CardHeader className="flex-col">
                 <div className="flex size-10 items-center justify-center rounded-[var(--radius-md)] bg-[#fff8f0] text-[var(--accent-orange)]">
@@ -193,10 +352,10 @@ export default async function RecipeSummaryPage({ params }: RecipeSummaryPagePro
                 </div>
               </CardHeader>
               <div className="flex flex-col gap-3 sm:flex-row">
-                <Link href={"/receitas/" + recipe.id + "/ingredientes"} className="inline-flex h-10 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white px-4 text-sm font-semibold text-[var(--brand-petrol)] transition hover:bg-[var(--surface-muted)]">
+                <Link href={'/receitas/' + recipe.id + '/ingredientes'} className="inline-flex h-10 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white px-4 text-sm font-semibold text-[var(--brand-petrol)] transition hover:bg-[var(--surface-muted)]">
                   Editar ingredientes
                 </Link>
-                <Link href={"/receitas/" + recipe.id + "/rendimento"} className="inline-flex h-10 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white px-4 text-sm font-semibold text-[var(--brand-petrol)] transition hover:bg-[var(--surface-muted)]">
+                <Link href={'/receitas/' + recipe.id + '/rendimento'} className="inline-flex h-10 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white px-4 text-sm font-semibold text-[var(--brand-petrol)] transition hover:bg-[var(--surface-muted)]">
                   Editar rendimento
                 </Link>
                 <Button type="button" disabled>Gerar tabela nutricional</Button>
