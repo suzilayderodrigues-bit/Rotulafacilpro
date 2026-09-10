@@ -3,6 +3,7 @@ import { AlertCircle, Edit3, FlaskConical, Lock, Package, Scale, TableProperties
 import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, EmptyState } from "@/components/design-system";
 import { Sidebar } from "@/components/layout/sidebar";
 import { NutritionFactsTable } from "@/components/nutrition/nutrition-facts-table";
+import { FrontOfPackNutritionPreview } from "@/components/nutrition/front-of-pack-nutrition-preview";
 import { Topbar } from "@/components/layout/topbar";
 import { requireUser } from "@/lib/auth/session";
 import {
@@ -16,8 +17,10 @@ import { calculateServingsPerPackage, formatServingsPerPackageLabel } from "@/li
 import {
   buildNutritionTableViewModel,
   calculateNutritionPerServing,
+  evaluateFrontOfPack,
   formatNutritionForDeclaration,
   getServingSuggestion,
+  type FrontOfPackEvaluation,
   type NutritionTableViewModel,
   type RegulatoryNutritionResult
 } from "@/lib/regulatory";
@@ -308,10 +311,12 @@ export default async function RecipeSummaryPage({ params, searchParams }: Recipe
   let nutritionResult: NutritionCalculationResult | null = null;
   let regulatoryNutritionResult: RegulatoryNutritionResult | null = null;
   let nutritionTableModel: NutritionTableViewModel | null = null;
+  let frontOfPackEvaluation: FrontOfPackEvaluation | null = null;
   const nutritionMessage = "A prévia será exibida quando a receita tiver ingredientes e rendimento final válido.";
 
   try {
     nutritionResult = calculateRecipeNutrition(recipe);
+    frontOfPackEvaluation = evaluateFrontOfPack(nutritionResult);
     regulatoryNutritionResult = calculateNutritionPerServing(nutritionResult, recipe.servingSize, packagingUnit);
     nutritionTableModel = buildNutritionTableViewModel(
       formatNutritionForDeclaration(regulatoryNutritionResult),
@@ -424,6 +429,25 @@ export default async function RecipeSummaryPage({ params, searchParams }: Recipe
               ) : (
                 <div className="rounded-[var(--radius-md)] border border-[#f4d5b6] bg-[#fff8f0] px-4 py-3 text-sm leading-6 text-[#8a4b15]">
                   A tabela será exibida quando a receita tiver ingredientes e rendimento final válido.
+                </div>
+              )}
+            </Card>
+
+            <Card className="mt-5 shadow-none">
+              <CardHeader className="flex-col">
+                <div className="flex size-10 items-center justify-center rounded-[var(--radius-md)] bg-black text-white">
+                  <AlertCircle className="size-5" />
+                </div>
+                <div>
+                  <CardTitle>Rotulagem nutricional frontal</CardTitle>
+                  <CardDescription>Avaliação técnica dos limites por 100 g ou 100 ml.</CardDescription>
+                </div>
+              </CardHeader>
+              {frontOfPackEvaluation ? (
+                <FrontOfPackNutritionPreview evaluation={frontOfPackEvaluation} />
+              ) : (
+                <div className="rounded-[var(--radius-md)] border border-[#f4d5b6] bg-[#fff8f0] px-4 py-3 text-sm leading-6 text-[#8a4b15]">
+                  A avaliação será exibida quando a receita tiver ingredientes e rendimento final válido.
                 </div>
               )}
             </Card>
