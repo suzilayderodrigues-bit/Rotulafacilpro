@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AlertCircle, Edit3, FlaskConical, Lock, Package, Scale } from "lucide-react";
-import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, EmptyState, Input, Label } from "@/components/design-system";
+import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, EmptyState } from "@/components/design-system";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { requireUser } from "@/lib/auth/session";
@@ -12,6 +12,8 @@ import {
 } from "@/lib/nutrition";
 import { updateRecipePackagingAction } from "@/lib/recipes/actions";
 import { calculateServingsPerPackage, formatServingsPerPackageLabel } from "@/lib/recipes/domain";
+import { getServingSuggestion } from "@/lib/regulatory";
+import { PackagingForm } from "./packaging-form";
 import { findRecipeForNutrition } from "@/lib/recipes/repository";
 
 type RecipeSummaryPageProps = {
@@ -261,6 +263,7 @@ export default async function RecipeSummaryPage({ params, searchParams }: Recipe
   const packagingUnit = recipe.physicalState === "LIQUID" ? "MILLILITER" : "GRAM";
   const packagingUnitLabel = unitName(packagingUnit);
   const packagingMessage = packagingStatusMessage(query.status);
+  const servingSuggestion = getServingSuggestion(recipe.foodCategory, recipe.physicalState);
   let nutritionResult: NutritionCalculationResult | null = null;
   const nutritionMessage = "A prévia será exibida quando a receita tiver ingredientes e rendimento final válido.";
 
@@ -363,31 +366,16 @@ export default async function RecipeSummaryPage({ params, searchParams }: Recipe
               {packagingMessage ? (
                 <p className="mb-4 rounded-[var(--radius-md)] border border-[#f4d5b6] bg-[#fff8f0] px-4 py-3 text-sm text-[#8a4b15]">{packagingMessage}</p>
               ) : null}
-              <form action={updateRecipePackagingAction} className="grid gap-4 lg:grid-cols-[1fr_1fr_1.2fr_auto] lg:items-end">
-                <input type="hidden" name="recipeId" value={recipe.id} />
-                <input type="hidden" name="netQuantityUnit" value={packagingUnit} />
-                <input type="hidden" name="servingUnit" value={packagingUnit} />
-                <div className="space-y-2">
-                  <Label htmlFor="netQuantity">Quantidade líquida da embalagem</Label>
-                  <div className="flex overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white focus-within:ring-2 focus-within:ring-[var(--ring)]">
-                    <Input id="netQuantity" name="netQuantity" inputMode="decimal" defaultValue={formatInputDecimal(recipe.netQuantity)} className="border-0 focus:ring-0" placeholder="500" />
-                    <span className="flex items-center border-l border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)]">{packagingUnitLabel}</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="servingSize">Porção</Label>
-                  <div className="flex overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white focus-within:ring-2 focus-within:ring-[var(--ring)]">
-                    <Input id="servingSize" name="servingSize" inputMode="decimal" defaultValue={formatInputDecimal(recipe.servingSize)} className="border-0 focus:ring-0" placeholder="50" />
-                    <span className="flex items-center border-l border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)]">{packagingUnitLabel}</span>
-                  </div>
-                  <p className="text-xs leading-5 text-[var(--muted)]">Esse valor será usado para preparar a tabela nutricional.</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="householdMeasure">Medida caseira</Label>
-                  <Input id="householdMeasure" name="householdMeasure" defaultValue={recipe.householdMeasure ?? ""} placeholder="1 unidade" />
-                </div>
-                <Button type="submit">Salvar</Button>
-              </form>
+              <PackagingForm
+                action={updateRecipePackagingAction}
+                recipeId={recipe.id}
+                unit={packagingUnit}
+                unitLabel={packagingUnitLabel}
+                defaultNetQuantity={formatInputDecimal(recipe.netQuantity)}
+                defaultServingSize={formatInputDecimal(recipe.servingSize)}
+                defaultHouseholdMeasure={recipe.householdMeasure ?? String()}
+                suggestion={servingSuggestion}
+              />
               <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
                 <div className="rounded-[var(--radius-md)] bg-[var(--surface-muted)] p-3">
                   <dt className="font-semibold text-[var(--muted)]">Quantidade líquida</dt>
