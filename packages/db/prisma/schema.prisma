@@ -130,6 +130,13 @@ model Recipe {
   finalYieldUnit              IngredientBaseUnit
   unitsProduced               Int?
   unitWeight                  Decimal?                      @db.Decimal(10, 2)
+  netQuantity                 Decimal?                      @db.Decimal(10, 2)
+  netQuantityUnit             IngredientBaseUnit?
+  servingSize                 Decimal?                      @db.Decimal(10, 2)
+  servingUnit                 IngredientBaseUnit?
+  householdMeasure            String?
+  servingsPerPackage          Decimal?                      @db.Decimal(10, 4)
+  isIndividualPackage         Boolean                       @default(false)
   confirmedAllergens          String[]                      @default([])
   glutenStatus                RecipeDisclosureStatus?
   lactoseStatus               RecipeDisclosureStatus?

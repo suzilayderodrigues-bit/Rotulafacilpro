@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { type IngredientBaseUnit, type RecipePhysicalState } from "@rotula-facil-pro/db";
 import { requireUser } from "@/lib/auth/session";
 import { RecipeValidationError } from "./domain";
-import { addRecipeIngredient, createRecipe, removeRecipeIngredient, updateRecipeInformation, updateRecipeYield } from "./repository";
+import { addRecipeIngredient, createRecipe, removeRecipeIngredient, updateRecipeInformation, updateRecipePackaging, updateRecipeYield } from "./repository";
 
 function formString(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -69,12 +69,28 @@ function yieldErrorParam(error: unknown) {
   return "formulario";
 }
 
+function packagingErrorParam(error: unknown) {
+  if (error instanceof RecipeValidationError) {
+    if (error.code === "invalid-net-quantity") return "quantidade-liquida";
+    if (error.code === "invalid-serving-size") return "porcao";
+    if (error.code === "invalid-household-measure") return "medida-caseira";
+    if (error.code === "invalid-yield-unit") return "unidade";
+    if (error.code === "recipe-not-found") return "receita";
+  }
+
+  return "formulario";
+}
+
 function recipeIngredientsHref(recipeId: string, status?: string) {
   return status ? "/receitas/" + recipeId + "/ingredientes?status=" + status : "/receitas/" + recipeId + "/ingredientes";
 }
 
 function recipeYieldHref(recipeId: string, status?: string) {
   return status ? "/receitas/" + recipeId + "/rendimento?status=" + status : "/receitas/" + recipeId + "/rendimento";
+}
+
+function recipeSummaryHref(recipeId: string, status?: string) {
+  return status ? "/receitas/" + recipeId + "?status=" + status : "/receitas/" + recipeId;
 }
 
 export async function createRecipeProductAction(formData: FormData) {
@@ -192,4 +208,29 @@ export async function updateRecipeInformationAction(formData: FormData) {
   }
 
   redirect("/receitas/" + recipeId);
+}
+
+export async function updateRecipePackagingAction(formData: FormData) {
+  const user = await requireUser();
+  const recipeId = formString(formData, "recipeId");
+  const netQuantityUnit = ingredientUnit(formString(formData, "netQuantityUnit"));
+  const servingUnit = ingredientUnit(formString(formData, "servingUnit"));
+
+  if (!recipeId || !netQuantityUnit || !servingUnit) {
+    redirect(recipeSummaryHref(recipeId || "", "embalagem-formulario"));
+  }
+
+  try {
+    await updateRecipePackaging(user.id, recipeId, {
+      netQuantity: formString(formData, "netQuantity"),
+      netQuantityUnit,
+      servingSize: formString(formData, "servingSize"),
+      servingUnit,
+      householdMeasure: formString(formData, "householdMeasure")
+    });
+  } catch (error) {
+    redirect(recipeSummaryHref(recipeId, "embalagem-" + packagingErrorParam(error)));
+  }
+
+  redirect(recipeSummaryHref(recipeId, "embalagem-salva"));
 }

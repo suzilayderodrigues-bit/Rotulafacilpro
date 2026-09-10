@@ -34,6 +34,14 @@ export type RecipeInformationInput = {
   reviewed?: string | boolean | null;
 };
 
+export type RecipePackagingInput = {
+  netQuantity: number | string;
+  netQuantityUnit: IngredientBaseUnit;
+  servingSize: number | string;
+  servingUnit: IngredientBaseUnit;
+  householdMeasure: string;
+};
+
 export type RecipeValidationErrorCode =
   | "name-required"
   | "invalid-physical-state"
@@ -41,6 +49,9 @@ export type RecipeValidationErrorCode =
   | "invalid-final-yield"
   | "invalid-units-produced"
   | "invalid-unit-weight"
+  | "invalid-net-quantity"
+  | "invalid-serving-size"
+  | "invalid-household-measure"
   | "inconsistent-yield"
   | "recipe-has-no-ingredients"
   | "invalid-information"
@@ -264,6 +275,50 @@ export function validateRecipeInformationInput(input: RecipeInformationInput) {
     crossContaminationAllergens:
       crossContaminationRisk === "YES" ? normalizeTextList([input.crossContaminationAllergens]) : [],
     informationReviewedAt: new Date()
+  };
+}
+
+export function calculateServingsPerPackage(netQuantity: number, servingSize: number) {
+  const value = netQuantity / servingSize;
+  const isIndividualPackage = value <= 2;
+  const roundedForDisplay = Math.round(value);
+
+  return {
+    value,
+    isIndividualPackage,
+    roundedForDisplay,
+    isInteger: Number.isInteger(value)
+  };
+}
+
+export function formatServingsPerPackageLabel(input: ReturnType<typeof calculateServingsPerPackage>) {
+  if (input.isIndividualPackage) return null;
+
+  return input.isInteger ? String(input.value) : "Cerca de " + input.roundedForDisplay;
+}
+
+export function validateRecipePackagingInput(input: RecipePackagingInput, physicalState: RecipePhysicalState) {
+  const netQuantity = parsePositiveDecimal(input.netQuantity, "invalid-net-quantity");
+  const servingSize = parsePositiveDecimal(input.servingSize, "invalid-serving-size");
+  const householdMeasure = input.householdMeasure.trim();
+  const servings = calculateServingsPerPackage(netQuantity, servingSize);
+
+  if (!householdMeasure) {
+    throw new RecipeValidationError("invalid-household-measure");
+  }
+
+  if (servingSize > netQuantity) {
+    throw new RecipeValidationError("invalid-serving-size");
+  }
+
+  return {
+    netQuantity,
+    netQuantityUnit: validateYieldUnit(physicalState, input.netQuantityUnit),
+    servingSize,
+    servingUnit: validateYieldUnit(physicalState, input.servingUnit),
+    householdMeasure,
+    servingsPerPackage: servings.value,
+    isIndividualPackage: servings.isIndividualPackage
   };
 }
 

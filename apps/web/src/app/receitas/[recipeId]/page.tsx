@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { AlertCircle, Edit3, FlaskConical, Lock, Scale } from "lucide-react";
-import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, EmptyState } from "@/components/design-system";
+import { AlertCircle, Edit3, FlaskConical, Lock, Package, Scale } from "lucide-react";
+import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, EmptyState, Input, Label } from "@/components/design-system";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { requireUser } from "@/lib/auth/session";
@@ -10,10 +10,13 @@ import {
   type NutritionCalculationResult,
   type NutritionNutrientField
 } from "@/lib/nutrition";
+import { updateRecipePackagingAction } from "@/lib/recipes/actions";
+import { calculateServingsPerPackage, formatServingsPerPackageLabel } from "@/lib/recipes/domain";
 import { findRecipeForNutrition } from "@/lib/recipes/repository";
 
 type RecipeSummaryPageProps = {
   params: Promise<{ recipeId: string }>;
+  searchParams?: Promise<{ status?: string }>;
 };
 
 type NutrientPresentation = {
@@ -45,6 +48,10 @@ function unitLabel(value: string) {
   return value === "MILLILITER" ? "ml" : "g";
 }
 
+function unitName(value: string) {
+  return value === "MILLILITER" ? "ml" : "g";
+}
+
 function basisLabel(value: NutritionCalculationResult["basis"]) {
   return value === "100ml" ? "Por 100 ml" : "Por 100 g";
 }
@@ -57,13 +64,21 @@ function formatDecimal(value: unknown) {
   return numberValue.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
 }
 
+function formatInputDecimal(value: unknown) {
+  if (value === null || value === undefined) return "";
+  const numberValue = Number(value);
+  if (!Number.isFinite(numberValue)) return "";
+
+  return String(numberValue).replace(".", ",");
+}
+
 function formatNutrientValue(value: number, unit: NutrientPresentation["unit"]) {
   const formatted = value.toLocaleString("pt-BR", {
     maximumFractionDigits: unit === "kcal" ? 0 : 2,
     minimumFractionDigits: 0
   });
 
-  return formatted + ' ' + unit;
+  return formatted + " " + unit;
 }
 
 function nutrientCell(value: number | null, unit: NutrientPresentation["unit"], isComplete: boolean) {
@@ -84,6 +99,31 @@ function crossContaminationLabel(value: string | null) {
   if (value === "NO") return "Não";
   if (value === "UNKNOWN") return "Não sei";
   return "Não revisado";
+}
+
+function packagingStatusMessage(status?: string) {
+  if (status === "embalagem-salva") return "Dados de porção e embalagem salvos.";
+  if (status?.startsWith("embalagem-")) return "Confira os dados de porção e embalagem antes de salvar.";
+  return null;
+}
+
+function servingsPerPackageLabel(recipe: {
+  netQuantity: unknown;
+  servingSize: unknown;
+  servingsPerPackage: unknown;
+  isIndividualPackage: boolean;
+}) {
+  const netQuantity = Number(recipe.netQuantity);
+  const servingSize = Number(recipe.servingSize);
+
+  if (!Number.isFinite(netQuantity) || !Number.isFinite(servingSize) || netQuantity <= 0 || servingSize <= 0) {
+    return "Não informado";
+  }
+
+  const calculated = calculateServingsPerPackage(netQuantity, servingSize);
+  const label = formatServingsPerPackageLabel(calculated);
+
+  return label ?? "Embalagem individual";
 }
 
 function NutritionUnavailable({ message }: { message: string }) {
@@ -187,9 +227,10 @@ function NutritionPreview({ result }: { result: NutritionCalculationResult }) {
   );
 }
 
-export default async function RecipeSummaryPage({ params }: RecipeSummaryPageProps) {
+export default async function RecipeSummaryPage({ params, searchParams }: RecipeSummaryPageProps) {
   const user = await requireUser();
   const { recipeId } = await params;
+  const query = searchParams ? await searchParams : {};
   const recipe = await findRecipeForNutrition(user.id, recipeId);
 
   if (!recipe) {
@@ -217,6 +258,9 @@ export default async function RecipeSummaryPage({ params }: RecipeSummaryPagePro
   }
 
   const unit = unitLabel(recipe.finalYieldUnit);
+  const packagingUnit = recipe.physicalState === "LIQUID" ? "MILLILITER" : "GRAM";
+  const packagingUnitLabel = unitName(packagingUnit);
+  const packagingMessage = packagingStatusMessage(query.status);
   let nutritionResult: NutritionCalculationResult | null = null;
   const nutritionMessage = "A prévia será exibida quando a receita tiver ingredientes e rendimento final válido.";
 
@@ -308,6 +352,64 @@ export default async function RecipeSummaryPage({ params }: RecipeSummaryPagePro
 
             <Card className="mt-5 shadow-none">
               <CardHeader className="flex-col">
+                <div className="flex size-10 items-center justify-center rounded-[var(--radius-md)] bg-[#e8f7fa] text-[var(--brand-petrol)]">
+                  <Package className="size-5" />
+                </div>
+                <div>
+                  <CardTitle>Porção e embalagem</CardTitle>
+                  <CardDescription>Esses dados serão usados para preparar a tabela nutricional.</CardDescription>
+                </div>
+              </CardHeader>
+              {packagingMessage ? (
+                <p className="mb-4 rounded-[var(--radius-md)] border border-[#f4d5b6] bg-[#fff8f0] px-4 py-3 text-sm text-[#8a4b15]">{packagingMessage}</p>
+              ) : null}
+              <form action={updateRecipePackagingAction} className="grid gap-4 lg:grid-cols-[1fr_1fr_1.2fr_auto] lg:items-end">
+                <input type="hidden" name="recipeId" value={recipe.id} />
+                <input type="hidden" name="netQuantityUnit" value={packagingUnit} />
+                <input type="hidden" name="servingUnit" value={packagingUnit} />
+                <div className="space-y-2">
+                  <Label htmlFor="netQuantity">Quantidade líquida da embalagem</Label>
+                  <div className="flex overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white focus-within:ring-2 focus-within:ring-[var(--ring)]">
+                    <Input id="netQuantity" name="netQuantity" inputMode="decimal" defaultValue={formatInputDecimal(recipe.netQuantity)} className="border-0 focus:ring-0" placeholder="500" />
+                    <span className="flex items-center border-l border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)]">{packagingUnitLabel}</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="servingSize">Porção</Label>
+                  <div className="flex overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white focus-within:ring-2 focus-within:ring-[var(--ring)]">
+                    <Input id="servingSize" name="servingSize" inputMode="decimal" defaultValue={formatInputDecimal(recipe.servingSize)} className="border-0 focus:ring-0" placeholder="50" />
+                    <span className="flex items-center border-l border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)]">{packagingUnitLabel}</span>
+                  </div>
+                  <p className="text-xs leading-5 text-[var(--muted)]">Esse valor será usado para preparar a tabela nutricional.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="householdMeasure">Medida caseira</Label>
+                  <Input id="householdMeasure" name="householdMeasure" defaultValue={recipe.householdMeasure ?? ""} placeholder="1 unidade" />
+                </div>
+                <Button type="submit">Salvar</Button>
+              </form>
+              <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-[var(--radius-md)] bg-[var(--surface-muted)] p-3">
+                  <dt className="font-semibold text-[var(--muted)]">Quantidade líquida</dt>
+                  <dd className="mt-1 text-[var(--foreground)]">{formatDecimal(recipe.netQuantity)} {recipe.netQuantity ? packagingUnitLabel : ""}</dd>
+                </div>
+                <div className="rounded-[var(--radius-md)] bg-[var(--surface-muted)] p-3">
+                  <dt className="font-semibold text-[var(--muted)]">Porção</dt>
+                  <dd className="mt-1 text-[var(--foreground)]">{formatDecimal(recipe.servingSize)} {recipe.servingSize ? packagingUnitLabel : ""}</dd>
+                </div>
+                <div className="rounded-[var(--radius-md)] bg-[var(--surface-muted)] p-3">
+                  <dt className="font-semibold text-[var(--muted)]">Medida caseira</dt>
+                  <dd className="mt-1 text-[var(--foreground)]">{recipe.householdMeasure || "Não informada"}</dd>
+                </div>
+                <div className="rounded-[var(--radius-md)] bg-[var(--surface-muted)] p-3">
+                  <dt className="font-semibold text-[var(--muted)]">Porções por embalagem</dt>
+                  <dd className="mt-1 text-[var(--foreground)]">{servingsPerPackageLabel(recipe)}</dd>
+                </div>
+              </dl>
+            </Card>
+
+            <Card className="mt-5 shadow-none">
+              <CardHeader className="flex-col">
                 <div className="flex size-10 items-center justify-center rounded-[var(--radius-md)] bg-[#fff8f0] text-[var(--accent-orange)]">
                   <Lock className="size-5" />
                 </div>
@@ -352,10 +454,10 @@ export default async function RecipeSummaryPage({ params }: RecipeSummaryPagePro
                 </div>
               </CardHeader>
               <div className="flex flex-col gap-3 sm:flex-row">
-                <Link href={'/receitas/' + recipe.id + '/ingredientes'} className="inline-flex h-10 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white px-4 text-sm font-semibold text-[var(--brand-petrol)] transition hover:bg-[var(--surface-muted)]">
+                <Link href={"/receitas/" + recipe.id + "/ingredientes"} className="inline-flex h-10 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white px-4 text-sm font-semibold text-[var(--brand-petrol)] transition hover:bg-[var(--surface-muted)]">
                   Editar ingredientes
                 </Link>
-                <Link href={'/receitas/' + recipe.id + '/rendimento'} className="inline-flex h-10 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white px-4 text-sm font-semibold text-[var(--brand-petrol)] transition hover:bg-[var(--surface-muted)]">
+                <Link href={"/receitas/" + recipe.id + "/rendimento"} className="inline-flex h-10 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white px-4 text-sm font-semibold text-[var(--brand-petrol)] transition hover:bg-[var(--surface-muted)]">
                   Editar rendimento
                 </Link>
                 <Button type="button" disabled>Gerar tabela nutricional</Button>

@@ -5,9 +5,11 @@ import {
   RecipeValidationError,
   validateRecipeIngredientInput,
   validateRecipeInformationInput,
+  validateRecipePackagingInput,
   validateRecipeInput,
   validateRecipeYieldInput,
   type RecipeInformationInput,
+  type RecipePackagingInput,
   type RecipeIngredientInput,
   type RecipeInput,
   type RecipeYieldInput
@@ -148,6 +150,30 @@ export async function updateRecipeInformation(userId: string, recipeId: string, 
   }
 
   const data = validateRecipeInformationInput(input);
+
+  return prisma.recipe.update({
+    where: { id: current.id },
+    data
+  });
+}
+
+export async function updateRecipePackaging(userId: string, recipeId: string, input: RecipePackagingInput) {
+  const current = await prisma.recipe.findFirst({
+    where: {
+      id: recipeId,
+      userId
+    },
+    select: {
+      id: true,
+      physicalState: true
+    }
+  });
+
+  if (!current) {
+    throw new RecipeValidationError("recipe-not-found");
+  }
+
+  const data = validateRecipePackagingInput(input, current.physicalState);
 
   return prisma.recipe.update({
     where: { id: current.id },
