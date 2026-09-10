@@ -12,7 +12,11 @@ import {
 } from "@/lib/nutrition";
 import { updateRecipePackagingAction } from "@/lib/recipes/actions";
 import { calculateServingsPerPackage, formatServingsPerPackageLabel } from "@/lib/recipes/domain";
-import { getServingSuggestion } from "@/lib/regulatory";
+import {
+  calculateNutritionPerServing,
+  getServingSuggestion,
+  type RegulatoryNutritionResult
+} from "@/lib/regulatory";
 import { PackagingForm } from "./packaging-form";
 import { findRecipeForNutrition } from "@/lib/recipes/repository";
 
@@ -89,6 +93,13 @@ function nutrientCell(value: number | null, unit: NutrientPresentation["unit"], 
   return formatNutrientValue(value, unit);
 }
 
+function dailyValueCell(value: number | null, hasEstablishedDailyValue: boolean, isComplete: boolean) {
+  if (!hasEstablishedDailyValue) return "Não estabelecido";
+  if (!isComplete || value === null) return "Não disponível";
+
+  return value.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) + "%";
+}
+
 function disclosureLabel(value: string | null) {
   if (value === "CONTAINS") return "Contém";
   if (value === "DOES_NOT_CONTAIN") return "Não contém";
@@ -144,9 +155,17 @@ function NutritionUnavailable({ message }: { message: string }) {
   );
 }
 
-function NutritionPreview({ result }: { result: NutritionCalculationResult }) {
+function NutritionPreview({
+  result,
+  regulatoryResult
+}: {
+  result: NutritionCalculationResult;
+  regulatoryResult: RegulatoryNutritionResult;
+}) {
   const hasIncompleteValues = nutrientPresentation.some((item) => !result.nutrients[item.field].isComplete);
   const showPerUnit = result.unitWeight !== null;
+  const showPerServing = regulatoryResult.servingSize !== null;
+  const showDailyValue = showPerServing && nutrientPresentation.some((item) => regulatoryResult.nutrients[item.field].hasEstablishedDailyValue);
 
   return (
     <Card className="mt-5 shadow-none">
@@ -175,18 +194,23 @@ function NutritionPreview({ result }: { result: NutritionCalculationResult }) {
               <th className="px-4 py-3">Nutriente</th>
               <th className="px-4 py-3">Total da receita</th>
               <th className="px-4 py-3">{basisLabel(result.basis)}</th>
+              {showPerServing ? <th className="px-4 py-3">Por porção</th> : null}
+              {showDailyValue ? <th className="px-4 py-3">%VD*</th> : null}
               {showPerUnit ? <th className="px-4 py-3">Por unidade</th> : null}
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--border)] bg-white">
             {nutrientPresentation.map((item) => {
               const nutrient = result.nutrients[item.field];
+              const regulatoryNutrient = regulatoryResult.nutrients[item.field];
 
               return (
                 <tr key={item.field}>
                   <td className="px-4 py-3 font-medium text-[var(--foreground)]">{item.label}</td>
                   <td className="px-4 py-3 text-[var(--muted)]">{nutrientCell(nutrient.recipeTotal, item.unit, nutrient.isComplete)}</td>
                   <td className="px-4 py-3 text-[var(--muted)]">{nutrientCell(nutrient.per100, item.unit, nutrient.isComplete)}</td>
+                  {showPerServing ? <td className="px-4 py-3 text-[var(--muted)]">{nutrientCell(regulatoryNutrient.perServing, item.unit, regulatoryNutrient.isComplete)}</td> : null}
+                  {showDailyValue ? <td className="px-4 py-3 text-[var(--muted)]">{dailyValueCell(regulatoryNutrient.dailyValuePercent, regulatoryNutrient.hasEstablishedDailyValue, regulatoryNutrient.isComplete)}</td> : null}
                   {showPerUnit ? <td className="px-4 py-3 text-[var(--muted)]">{nutrientCell(nutrient.perUnit, item.unit, nutrient.isComplete)}</td> : null}
                 </tr>
               );
@@ -198,6 +222,7 @@ function NutritionPreview({ result }: { result: NutritionCalculationResult }) {
       <div className="mt-4 grid gap-3 md:hidden">
         {nutrientPresentation.map((item) => {
           const nutrient = result.nutrients[item.field];
+          const regulatoryNutrient = regulatoryResult.nutrients[item.field];
 
           return (
             <div key={item.field} className="rounded-[var(--radius-md)] border border-[var(--border)] bg-white p-4">
@@ -214,6 +239,18 @@ function NutritionPreview({ result }: { result: NutritionCalculationResult }) {
                   <dt className="text-[var(--muted)]">{basisLabel(result.basis)}</dt>
                   <dd className="text-right text-[var(--foreground)]">{nutrientCell(nutrient.per100, item.unit, nutrient.isComplete)}</dd>
                 </div>
+                {showPerServing ? (
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-[var(--muted)]">Por porção</dt>
+                    <dd className="text-right text-[var(--foreground)]">{nutrientCell(regulatoryNutrient.perServing, item.unit, regulatoryNutrient.isComplete)}</dd>
+                  </div>
+                ) : null}
+                {showDailyValue ? (
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-[var(--muted)]">%VD*</dt>
+                    <dd className="text-right text-[var(--foreground)]">{dailyValueCell(regulatoryNutrient.dailyValuePercent, regulatoryNutrient.hasEstablishedDailyValue, regulatoryNutrient.isComplete)}</dd>
+                  </div>
+                ) : null}
                 {showPerUnit ? (
                   <div className="flex justify-between gap-4">
                     <dt className="text-[var(--muted)]">Por unidade</dt>
@@ -265,10 +302,12 @@ export default async function RecipeSummaryPage({ params, searchParams }: Recipe
   const packagingMessage = packagingStatusMessage(query.status);
   const servingSuggestion = getServingSuggestion(recipe.foodCategory, recipe.physicalState);
   let nutritionResult: NutritionCalculationResult | null = null;
+  let regulatoryNutritionResult: RegulatoryNutritionResult | null = null;
   const nutritionMessage = "A prévia será exibida quando a receita tiver ingredientes e rendimento final válido.";
 
   try {
     nutritionResult = calculateRecipeNutrition(recipe);
+    regulatoryNutritionResult = calculateNutritionPerServing(nutritionResult, recipe.servingSize, packagingUnit);
   } catch (error) {
     if (!(error instanceof NutritionCalculationError)) {
       throw error;
@@ -351,7 +390,11 @@ export default async function RecipeSummaryPage({ params, searchParams }: Recipe
               </Card>
             </div>
 
-            {nutritionResult ? <NutritionPreview result={nutritionResult} /> : <NutritionUnavailable message={nutritionMessage} />}
+            {nutritionResult && regulatoryNutritionResult ? (
+              <NutritionPreview result={nutritionResult} regulatoryResult={regulatoryNutritionResult} />
+            ) : (
+              <NutritionUnavailable message={nutritionMessage} />
+            )}
 
             <Card className="mt-5 shadow-none">
               <CardHeader className="flex-col">
