@@ -291,34 +291,48 @@ export function calculateServingsPerPackage(netQuantity: number, servingSize: nu
   };
 }
 
-export function formatServingsPerPackageLabel(input: ReturnType<typeof calculateServingsPerPackage>) {
+export function formatServingsPerPackageLabel(input: { value: number; isIndividualPackage: boolean }) {
   if (input.isIndividualPackage) return null;
 
-  return input.isInteger ? String(input.value) : "Cerca de " + input.roundedForDisplay;
+  return Number.isInteger(input.value) ? String(input.value) : "Cerca de " + Math.round(input.value);
 }
 
 export function validateRecipePackagingInput(input: RecipePackagingInput, physicalState: RecipePhysicalState) {
   const netQuantity = parsePositiveDecimal(input.netQuantity, "invalid-net-quantity");
   const servingSize = parsePositiveDecimal(input.servingSize, "invalid-serving-size");
   const householdMeasure = input.householdMeasure.trim();
+  const netQuantityUnit = validateYieldUnit(physicalState, input.netQuantityUnit);
+  const servingUnit = validateYieldUnit(physicalState, input.servingUnit);
   const servings = calculateServingsPerPackage(netQuantity, servingSize);
-
-  if (!householdMeasure) {
-    throw new RecipeValidationError("invalid-household-measure");
-  }
 
   if (servingSize > netQuantity) {
     throw new RecipeValidationError("invalid-serving-size");
   }
 
+  if (servings.isIndividualPackage) {
+    return {
+      netQuantity,
+      netQuantityUnit,
+      servingSize: netQuantity,
+      servingUnit: netQuantityUnit,
+      householdMeasure: "1 embalagem",
+      servingsPerPackage: 1,
+      isIndividualPackage: true
+    };
+  }
+
+  if (!householdMeasure) {
+    throw new RecipeValidationError("invalid-household-measure");
+  }
+
   return {
     netQuantity,
-    netQuantityUnit: validateYieldUnit(physicalState, input.netQuantityUnit),
+    netQuantityUnit,
     servingSize,
-    servingUnit: validateYieldUnit(physicalState, input.servingUnit),
+    servingUnit,
     householdMeasure,
     servingsPerPackage: servings.value,
-    isIndividualPackage: servings.isIndividualPackage
+    isIndividualPackage: false
   };
 }
 

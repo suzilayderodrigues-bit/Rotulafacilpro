@@ -13,7 +13,7 @@ import {
   type NutritionNutrientField
 } from "@/lib/nutrition";
 import { updateRecipePackagingAction } from "@/lib/recipes/actions";
-import { calculateServingsPerPackage, formatServingsPerPackageLabel } from "@/lib/recipes/domain";
+import { formatServingsPerPackageLabel } from "@/lib/recipes/domain";
 import {
   buildNutritionTableViewModel,
   calculateNutritionPerServing,
@@ -130,20 +130,19 @@ function packagingStatusMessage(status?: string) {
 }
 
 function servingsPerPackageLabel(recipe: {
-  netQuantity: unknown;
-  servingSize: unknown;
   servingsPerPackage: unknown;
   isIndividualPackage: boolean;
 }) {
-  const netQuantity = Number(recipe.netQuantity);
-  const servingSize = Number(recipe.servingSize);
+  const servingsPerPackage = Number(recipe.servingsPerPackage);
 
-  if (!Number.isFinite(netQuantity) || !Number.isFinite(servingSize) || netQuantity <= 0 || servingSize <= 0) {
+  if (!Number.isFinite(servingsPerPackage) || servingsPerPackage <= 0) {
     return "Não informado";
   }
 
-  const calculated = calculateServingsPerPackage(netQuantity, servingSize);
-  const label = formatServingsPerPackageLabel(calculated);
+  const label = formatServingsPerPackageLabel({
+    value: servingsPerPackage,
+    isIndividualPackage: recipe.isIndividualPackage
+  });
 
   return label ?? "Embalagem individual";
 }
