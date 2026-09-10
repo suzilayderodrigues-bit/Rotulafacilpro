@@ -17,10 +17,12 @@ import { calculateServingsPerPackage, formatServingsPerPackageLabel } from "@/li
 import {
   buildNutritionTableViewModel,
   calculateNutritionPerServing,
+  composeFrontOfPackDecision,
   evaluateFrontOfPack,
+  evaluateFrontOfPackApplicability,
   formatNutritionForDeclaration,
   getServingSuggestion,
-  type FrontOfPackEvaluation,
+  type FinalFrontOfPackDecision,
   type NutritionTableViewModel,
   type RegulatoryNutritionResult
 } from "@/lib/regulatory";
@@ -311,12 +313,15 @@ export default async function RecipeSummaryPage({ params, searchParams }: Recipe
   let nutritionResult: NutritionCalculationResult | null = null;
   let regulatoryNutritionResult: RegulatoryNutritionResult | null = null;
   let nutritionTableModel: NutritionTableViewModel | null = null;
-  let frontOfPackEvaluation: FrontOfPackEvaluation | null = null;
+  let frontOfPackDecision: FinalFrontOfPackDecision | null = null;
   const nutritionMessage = "A prévia será exibida quando a receita tiver ingredientes e rendimento final válido.";
 
   try {
     nutritionResult = calculateRecipeNutrition(recipe);
-    frontOfPackEvaluation = evaluateFrontOfPack(nutritionResult);
+    frontOfPackDecision = composeFrontOfPackDecision(
+      evaluateFrontOfPackApplicability({ foodCategory: recipe.foodCategory }),
+      evaluateFrontOfPack(nutritionResult)
+    );
     regulatoryNutritionResult = calculateNutritionPerServing(nutritionResult, recipe.servingSize, packagingUnit);
     nutritionTableModel = buildNutritionTableViewModel(
       formatNutritionForDeclaration(regulatoryNutritionResult),
@@ -443,8 +448,8 @@ export default async function RecipeSummaryPage({ params, searchParams }: Recipe
                   <CardDescription>Avaliação técnica dos limites por 100 g ou 100 ml.</CardDescription>
                 </div>
               </CardHeader>
-              {frontOfPackEvaluation ? (
-                <FrontOfPackNutritionPreview evaluation={frontOfPackEvaluation} />
+              {frontOfPackDecision ? (
+                <FrontOfPackNutritionPreview decision={frontOfPackDecision} />
               ) : (
                 <div className="rounded-[var(--radius-md)] border border-[#f4d5b6] bg-[#fff8f0] px-4 py-3 text-sm leading-6 text-[#8a4b15]">
                   A avaliação será exibida quando a receita tiver ingredientes e rendimento final válido.
