@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { AlertCircle, Edit3, FlaskConical, Lock, Package, Scale } from "lucide-react";
+import { AlertCircle, Edit3, FlaskConical, Lock, Package, Scale, TableProperties } from "lucide-react";
 import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, EmptyState } from "@/components/design-system";
 import { Sidebar } from "@/components/layout/sidebar";
+import { NutritionFactsTable } from "@/components/nutrition/nutrition-facts-table";
 import { Topbar } from "@/components/layout/topbar";
 import { requireUser } from "@/lib/auth/session";
 import {
@@ -13,8 +14,11 @@ import {
 import { updateRecipePackagingAction } from "@/lib/recipes/actions";
 import { calculateServingsPerPackage, formatServingsPerPackageLabel } from "@/lib/recipes/domain";
 import {
+  buildNutritionTableViewModel,
   calculateNutritionPerServing,
+  formatNutritionForDeclaration,
   getServingSuggestion,
+  type NutritionTableViewModel,
   type RegulatoryNutritionResult
 } from "@/lib/regulatory";
 import { PackagingForm } from "./packaging-form";
@@ -303,11 +307,20 @@ export default async function RecipeSummaryPage({ params, searchParams }: Recipe
   const servingSuggestion = getServingSuggestion(recipe.foodCategory, recipe.physicalState);
   let nutritionResult: NutritionCalculationResult | null = null;
   let regulatoryNutritionResult: RegulatoryNutritionResult | null = null;
+  let nutritionTableModel: NutritionTableViewModel | null = null;
   const nutritionMessage = "A prévia será exibida quando a receita tiver ingredientes e rendimento final válido.";
 
   try {
     nutritionResult = calculateRecipeNutrition(recipe);
     regulatoryNutritionResult = calculateNutritionPerServing(nutritionResult, recipe.servingSize, packagingUnit);
+    nutritionTableModel = buildNutritionTableViewModel(
+      formatNutritionForDeclaration(regulatoryNutritionResult),
+      {
+        householdMeasure: recipe.householdMeasure,
+        servingsPerPackage: recipe.servingsPerPackage,
+        isIndividualPackage: recipe.isIndividualPackage
+      }
+    );
   } catch (error) {
     if (!(error instanceof NutritionCalculationError)) {
       throw error;
@@ -395,6 +408,25 @@ export default async function RecipeSummaryPage({ params, searchParams }: Recipe
             ) : (
               <NutritionUnavailable message={nutritionMessage} />
             )}
+
+            <Card className="mt-5 shadow-none">
+              <CardHeader className="flex-col">
+                <div className="flex size-10 items-center justify-center rounded-[var(--radius-md)] bg-[#e8f7fa] text-[var(--brand-petrol)]">
+                  <TableProperties className="size-5" />
+                </div>
+                <div>
+                  <CardTitle>Tabela nutricional</CardTitle>
+                  <CardDescription>Modelo vertical preparado com os valores regulatoriamente declarados.</CardDescription>
+                </div>
+              </CardHeader>
+              {nutritionTableModel ? (
+                <NutritionFactsTable model={nutritionTableModel} />
+              ) : (
+                <div className="rounded-[var(--radius-md)] border border-[#f4d5b6] bg-[#fff8f0] px-4 py-3 text-sm leading-6 text-[#8a4b15]">
+                  A tabela será exibida quando a receita tiver ingredientes e rendimento final válido.
+                </div>
+              )}
+            </Card>
 
             <Card className="mt-5 shadow-none">
               <CardHeader className="flex-col">
