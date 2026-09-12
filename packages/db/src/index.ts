@@ -27,6 +27,9 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export type {
+  Barcode,
+  BarcodeType,
+  BarcodeValueFormat,
   Ingredient,
   IngredientBaseUnit,
   IngredientSource,

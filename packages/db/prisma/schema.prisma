@@ -18,6 +18,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   customIngredients   Ingredient[]
   recipes             Recipe[]
+  barcodes            Barcode[]
 
   @@map("users")
 }
@@ -76,6 +77,19 @@ enum RecipeCrossContaminationRisk {
   YES
   NO
   UNKNOWN
+}
+
+enum BarcodeType {
+  OFFICIAL_GTIN
+  INTERNAL
+}
+
+enum BarcodeValueFormat {
+  GTIN_8
+  GTIN_12
+  GTIN_13
+  GTIN_14
+  INTERNAL
 }
 
 model Ingredient {
@@ -148,10 +162,29 @@ model Recipe {
 
   user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   ingredients RecipeIngredient[]
+  barcode     Barcode?
 
   @@index([userId])
   @@index([name])
   @@map("recipes")
+}
+
+model Barcode {
+  id        String             @id @default(cuid())
+  userId    String
+  recipeId  String?            @unique
+  type      BarcodeType
+  value     String
+  format    BarcodeValueFormat
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe Recipe? @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, value])
+  @@index([userId])
+  @@map("barcodes")
 }
 
 model RecipeIngredient {
