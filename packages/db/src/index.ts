@@ -30,6 +30,7 @@ export type {
   Barcode,
   BarcodeType,
   BarcodeValueFormat,
+  CommercialPlan,
   Ingredient,
   IngredientBaseUnit,
   IngredientSource,
