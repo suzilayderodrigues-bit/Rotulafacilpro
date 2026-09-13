@@ -1,8 +1,9 @@
 import { Badge, Button, Card, Input, Label } from "@/components/design-system";
+import Link from "next/link";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { requireUser } from "@/lib/auth/session";
-import { createInternalBarcodeAction, createOfficialBarcodeAction } from "@/lib/barcodes/actions";
+import { associateBarcodeAction, createInternalBarcodeAction, createOfficialBarcodeAction } from "@/lib/barcodes/actions";
 import { listBarcodes } from "@/lib/barcodes/repository";
 import { renderBarcodeSvg } from "@/lib/barcodes/render";
 import { listRecipes } from "@/lib/recipes/repository";
@@ -12,6 +13,10 @@ const messages: Record<string, string> = {
   "oficial-criado": "Código oficial cadastrado com sucesso.",
   "interno-criado": "Código interno criado com sucesso.",
   excluido: "Código excluído.",
+  associado: "Código associado ao produto.",
+  desassociado: "Código desassociado.",
+  "receita-ocupada": "Esta receita já possui um código de barras.",
+  "receita-nao-encontrada": "Não foi possível encontrar esta receita na sua conta.",
   comprimento: "Esse código possui uma quantidade de dígitos inválida.",
   digito: "O dígito verificador desse GTIN não confere.",
   "gtin-invalido": "Esse código não é um GTIN válido. Digite apenas números.",
@@ -23,7 +28,7 @@ const messages: Record<string, string> = {
 export default async function BarcodePage({
   searchParams
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; recipeId?: string }>;
 }) {
   const user = await requireUser();
   const [barcodes, recipes, query] = await Promise.all([
@@ -32,6 +37,9 @@ export default async function BarcodePage({
     searchParams
   ]);
   const recipeNames = new Map(recipes.map((recipe) => [recipe.id, recipe.name]));
+  const occupiedRecipeIds = new Set(barcodes.map((barcode) => barcode.recipeId).filter((id): id is string => id !== null));
+  const availableRecipes = recipes.filter((recipe) => !occupiedRecipeIds.has(recipe.id));
+  const selectedRecipeId = availableRecipes.some((recipe) => recipe.id === query.recipeId) ? query.recipeId : undefined;
   const message = query.status ? messages[query.status] : undefined;
 
   return (
@@ -60,6 +68,13 @@ export default async function BarcodePage({
                     <Label htmlFor="gtin">Código GTIN</Label>
                     <Input id="gtin" name="gtin" inputMode="numeric" autoComplete="off" required placeholder="Digite o número do GTIN" />
                   </div>
+                  <div>
+                    <Label htmlFor="official-recipe">Produto/receita (opcional)</Label>
+                    <select id="official-recipe" name="recipeId" defaultValue={selectedRecipeId ?? ""} className="h-10 w-full min-w-0 rounded-[var(--radius-md)] border border-[var(--border)] bg-white px-3 text-sm">
+                      <option value="">Sem receita associada</option>
+                      {availableRecipes.map((recipe) => <option key={recipe.id} value={recipe.id}>{recipe.name}</option>)}
+                    </select>
+                  </div>
                   <Button type="submit" className="w-full sm:w-auto">Validar e salvar</Button>
                 </form>
               </Card>
@@ -67,7 +82,14 @@ export default async function BarcodePage({
                 <h2 className="text-lg font-semibold">Gerar código interno</h2>
                 <p className="mt-2 text-sm text-[var(--muted)]">Crie um código para identificação e organização dentro do seu negócio.</p>
                 <p className="mt-3 text-sm font-medium text-[var(--brand-petrol)]">Este código não substitui um GTIN oficial.</p>
-                <form action={createInternalBarcodeAction} className="mt-5">
+                <form action={createInternalBarcodeAction} className="mt-5 space-y-4">
+                  <div>
+                    <Label htmlFor="internal-recipe">Produto/receita (opcional)</Label>
+                    <select id="internal-recipe" name="recipeId" defaultValue={selectedRecipeId ?? ""} className="h-10 w-full min-w-0 rounded-[var(--radius-md)] border border-[var(--border)] bg-white px-3 text-sm">
+                      <option value="">Sem receita associada</option>
+                      {availableRecipes.map((recipe) => <option key={recipe.id} value={recipe.id}>{recipe.name}</option>)}
+                    </select>
+                  </div>
                   <Button type="submit" className="w-full sm:w-auto">Gerar código interno</Button>
                 </form>
               </Card>
@@ -100,12 +122,33 @@ export default async function BarcodePage({
                         <p className="mt-3 break-all font-mono text-sm">{barcode.value}</p>
                         <div className="mt-4 flex min-h-24 items-center justify-center rounded-[var(--radius-md)] border border-dashed border-[var(--border)] bg-[var(--surface-muted)] p-3 text-center text-xs text-[var(--muted)]">
                           {display.status === "UNAVAILABLE" ? "Visualização gráfica temporariamente indisponível." : (
-                            // A futura biblioteca fornecerá o SVG; nenhum SVG é aceito da pessoa usuária.
                             <img className="max-h-28 w-full object-contain" src={`data:image/svg+xml,${encodeURIComponent(display.svg)}`} alt={`Código de barras ${barcode.value}`} />
                           )}
                         </div>
-                        <p className="mt-3 text-xs text-[var(--muted)]">{barcode.recipeId ? `Produto/receita: ${recipeNames.get(barcode.recipeId) ?? "Não disponível"}` : "Sem receita associada"}</p>
+                        <p className="mt-3 text-xs text-[var(--muted)]">{barcode.recipeId ? `Produto: ${recipeNames.get(barcode.recipeId) ?? "Não disponível"}` : "Sem produto associado"}</p>
                         <p className="mt-1 text-xs text-[var(--muted)]">Criado em {barcode.createdAt.toLocaleDateString("pt-BR")}</p>
+                        <form action={associateBarcodeAction} className="mt-4 space-y-2">
+                          <input type="hidden" name="barcodeId" value={barcode.id} />
+                          <Label htmlFor={`recipe-${barcode.id}`}>{barcode.recipeId ? "Alterar associação" : "Associar a uma receita"}</Label>
+                          <select id={`recipe-${barcode.id}`} name="recipeId" defaultValue={barcode.recipeId ?? ""} className="h-10 w-full min-w-0 rounded-[var(--radius-md)] border border-[var(--border)] bg-white px-3 text-sm">
+                            <option value="">Sem produto associado</option>
+                            {recipes.filter((recipe) => recipe.id === barcode.recipeId || !occupiedRecipeIds.has(recipe.id)).map((recipe) => <option key={recipe.id} value={recipe.id}>{recipe.name}</option>)}
+                          </select>
+                          <Button type="submit" className="w-full sm:w-auto">Salvar associação</Button>
+                        </form>
+                        {barcode.recipeId ? <form action={associateBarcodeAction} className="mt-2"><input type="hidden" name="barcodeId" value={barcode.id} /><Button type="submit" variant="secondary" className="w-full sm:w-auto">Desassociar</Button></form> : null}
+                        <details className="mt-4 min-w-0">
+                          <summary className="cursor-pointer text-sm font-semibold text-[var(--brand-petrol)]">Ampliar código</summary>
+                          <div className="mt-3 min-w-0 rounded-[var(--radius-md)] border border-[var(--border)] bg-white p-3 sm:p-5">
+                            {display.status === "READY" ? <img className="max-h-64 w-full object-contain" src={`data:image/svg+xml,${encodeURIComponent(display.svg)}`} alt={`Código de barras ampliado ${barcode.value}`} /> : <p>Visualização indisponível.</p>}
+                            <p className="mt-3 break-all font-mono text-sm">{barcode.value}</p>
+                            <p className="mt-1 text-xs text-[var(--muted)]">{display.symbology} · {barcode.type === "INTERNAL" ? "Código interno" : "Código oficial"}{barcode.recipeId ? ` · ${recipeNames.get(barcode.recipeId) ?? "Produto não disponível"}` : ""}</p>
+                          </div>
+                        </details>
+                        <div className="mt-4 flex flex-wrap gap-2 text-sm font-semibold text-[var(--brand-petrol)]">
+                          <Link href={`/codigo-de-barras/${barcode.id}/download/svg`} className="rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-2 hover:bg-[var(--surface-muted)]">Baixar SVG</Link>
+                          <Link href={`/codigo-de-barras/${barcode.id}/download/png`} className="rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-2 hover:bg-[var(--surface-muted)]">Baixar PNG</Link>
+                        </div>
                       </Card>
                     );
                   })}

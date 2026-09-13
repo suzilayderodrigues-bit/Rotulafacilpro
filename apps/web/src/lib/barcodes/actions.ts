@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
 import { BarcodeValidationError } from "./domain";
-import { createInternalBarcode, createOfficialGtinBarcode, deleteBarcode } from "./repository";
+import { associateBarcodeWithRecipe, createInternalBarcode, createOfficialGtinBarcode, deleteBarcode, findBarcodeByRecipe } from "./repository";
 
 const pagePath = "/codigo-de-barras";
 
@@ -11,37 +11,67 @@ function isDuplicate(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error && error.code === "P2002";
 }
 
+function recipeIdFromForm(formData: FormData) {
+  const value = formData.get("recipeId");
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+async function duplicateStatus(userId: string, recipeId: string | null) {
+  return recipeId && await findBarcodeByRecipe(userId, recipeId) ? "receita-ocupada" : "duplicado";
+}
+
 export async function createOfficialBarcodeAction(formData: FormData) {
   const user = await requireUser();
   const rawValue = formData.get("gtin");
   const value = typeof rawValue === "string" ? rawValue : "";
+  const recipeId = recipeIdFromForm(formData);
   let status = "erro";
 
   try {
-    await createOfficialGtinBarcode(user.id, value);
+    await createOfficialGtinBarcode(user.id, value, recipeId);
     status = "oficial-criado";
   } catch (error) {
     if (error instanceof BarcodeValidationError) {
       status = error.code === "invalid-length" ? "comprimento" : error.code === "invalid-check-digit" ? "digito" : "gtin-invalido";
     } else if (isDuplicate(error)) {
-      status = "duplicado";
+      status = await duplicateStatus(user.id, recipeId);
+    } else if (error instanceof Error && error.message === "RECIPE_NOT_FOUND") {
+      status = "receita-nao-encontrada";
     }
   }
 
   redirect(`${pagePath}?status=${status}`);
 }
 
-export async function createInternalBarcodeAction() {
+export async function createInternalBarcodeAction(formData: FormData) {
   const user = await requireUser();
+  const recipeId = recipeIdFromForm(formData);
   let status = "erro";
 
   try {
-    await createInternalBarcode(user.id);
+    await createInternalBarcode(user.id, recipeId);
     status = "interno-criado";
-  } catch {
-    // A interface exibe uma mensagem genérica sem revelar detalhes de persistência.
+  } catch (error) {
+    if (isDuplicate(error)) status = await duplicateStatus(user.id, recipeId);
+    else if (error instanceof Error && error.message === "RECIPE_NOT_FOUND") status = "receita-nao-encontrada";
   }
 
+  redirect(`${pagePath}?status=${status}`);
+}
+
+export async function associateBarcodeAction(formData: FormData) {
+  const user = await requireUser();
+  const barcodeId = formData.get("barcodeId");
+  const recipeId = recipeIdFromForm(formData);
+  if (typeof barcodeId !== "string" || !barcodeId) redirect(`${pagePath}?status=nao-encontrado`);
+
+  let status = "erro";
+  try {
+    const result = await associateBarcodeWithRecipe(user.id, barcodeId, recipeId);
+    status = result ? recipeId ? "associado" : "desassociado" : "receita-nao-encontrada";
+  } catch (error) {
+    if (isDuplicate(error)) status = "receita-ocupada";
+  }
   redirect(`${pagePath}?status=${status}`);
 }
 

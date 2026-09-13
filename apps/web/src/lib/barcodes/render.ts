@@ -23,7 +23,7 @@ const encoders = {
   INTERNAL: "code128"
 } as const;
 
-export function renderBarcodeSvg(input: BarcodeRenderInput): BarcodeRenderResult {
+function renderOptions(input: BarcodeRenderInput) {
   if (input.type === "OFFICIAL_GTIN") {
     const validated = validateOfficialGtin(input.value);
     if (validated.format !== input.format) throw new Error("Formato GTIN incompatível.");
@@ -31,18 +31,29 @@ export function renderBarcodeSvg(input: BarcodeRenderInput): BarcodeRenderResult
     throw new Error("Código interno inválido.");
   }
 
-  try {
-    const svg = bwipjs.toSVG({
+  return {
       bcid: encoders[input.format],
       text: input.value,
       scale: 2,
       height: 12,
       includetext: true,
-      textxalign: "center"
-    });
+      textxalign: "center" as const
+    };
+}
+
+export function renderBarcodeSvg(input: BarcodeRenderInput): BarcodeRenderResult {
+  const options = renderOptions(input);
+  try {
+    const svg = bwipjs.toSVG(options);
 
     return { status: "READY", svg, symbology: barcodeSymbologies[input.format] };
   } catch {
     return { status: "UNAVAILABLE", svg: null, symbology: barcodeSymbologies[input.format] };
   }
+}
+
+export function renderBarcodePng(input: BarcodeRenderInput): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    bwipjs.toBuffer(renderOptions(input), (error, png) => error ? reject(error) : resolve(png));
+  });
 }

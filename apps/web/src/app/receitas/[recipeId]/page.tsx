@@ -6,6 +6,8 @@ import { NutritionFactsTable } from "@/components/nutrition/nutrition-facts-tabl
 import { FrontOfPackNutritionPreview } from "@/components/nutrition/front-of-pack-nutrition-preview";
 import { Topbar } from "@/components/layout/topbar";
 import { requireUser } from "@/lib/auth/session";
+import { findBarcodeByRecipe } from "@/lib/barcodes/repository";
+import { renderBarcodeSvg } from "@/lib/barcodes/render";
 import {
   calculateRecipeNutrition,
   NutritionCalculationError,
@@ -304,6 +306,9 @@ export default async function RecipeSummaryPage({ params, searchParams }: Recipe
     );
   }
 
+  const barcode = await findBarcodeByRecipe(user.id, recipe.id);
+  const barcodeDisplay = barcode ? renderBarcodeSvg({ value: barcode.value, type: barcode.type, format: barcode.format }) : null;
+
   const unit = unitLabel(recipe.finalYieldUnit);
   const packagingUnit = recipe.physicalState === "LIQUID" ? "MILLILITER" : "GRAM";
   const packagingUnitLabel = unitName(packagingUnit);
@@ -411,6 +416,23 @@ export default async function RecipeSummaryPage({ params, searchParams }: Recipe
                 </dl>
               </Card>
             </div>
+
+            <Card className="mt-5 min-w-0 shadow-none">
+              <CardHeader className="flex-col">
+                <CardTitle>Código de barras</CardTitle>
+                <CardDescription>Identificação associada a este produto.</CardDescription>
+              </CardHeader>
+              {barcode ? (
+                <div className="min-w-0 space-y-3">
+                  <p className="text-sm">{barcode.type === "INTERNAL" ? "Código interno" : "Código oficial"}</p>
+                  <p className="break-all font-mono text-sm">{barcode.value}</p>
+                  {barcodeDisplay?.status === "READY" ? <img className="max-h-28 w-full object-contain" src={`data:image/svg+xml,${encodeURIComponent(barcodeDisplay.svg)}`} alt={`Código de barras ${barcode.value}`} /> : <p className="text-sm text-[var(--muted)]">Visualização temporariamente indisponível.</p>}
+                  <Link href="/codigo-de-barras" className="inline-flex rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-2 text-sm font-semibold text-[var(--brand-petrol)]">Abrir Código de Barras</Link>
+                </div>
+              ) : (
+                <Link href={`/codigo-de-barras?recipeId=${encodeURIComponent(recipe.id)}`} className="inline-flex rounded-[var(--radius-md)] border border-[var(--border)] px-3 py-2 text-sm font-semibold text-[var(--brand-petrol)]">Adicionar código de barras</Link>
+              )}
+            </Card>
 
             {nutritionResult && regulatoryNutritionResult ? (
               <NutritionPreview result={nutritionResult} regulatoryResult={regulatoryNutritionResult} />

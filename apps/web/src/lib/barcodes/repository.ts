@@ -13,14 +13,27 @@ export function findBarcode(userId: string, barcodeId: string) {
   return prisma.barcode.findFirst({ where: { id: barcodeId, userId } });
 }
 
-export function createOfficialGtinBarcode(userId: string, input: string) {
-  const barcode = validateOfficialGtin(input);
-  return prisma.barcode.create({ data: { userId, ...barcode } });
+async function ownedRecipeId(userId: string, recipeId: string | null) {
+  if (recipeId === null) return null;
+  const recipe = await prisma.recipe.findFirst({ where: { id: recipeId, userId }, select: { id: true } });
+  if (!recipe) throw new Error("RECIPE_NOT_FOUND");
+  return recipe.id;
 }
 
-export function createInternalBarcode(userId: string) {
+export function findBarcodeByRecipe(userId: string, recipeId: string) {
+  return prisma.barcode.findFirst({ where: { userId, recipeId } });
+}
+
+export async function createOfficialGtinBarcode(userId: string, input: string, recipeId: string | null = null) {
+  const barcode = validateOfficialGtin(input);
+  const ownedId = await ownedRecipeId(userId, recipeId);
+  return prisma.barcode.create({ data: { userId, recipeId: ownedId, ...barcode } });
+}
+
+export async function createInternalBarcode(userId: string, recipeId: string | null = null) {
+  const ownedId = await ownedRecipeId(userId, recipeId);
   const barcode = createInternalBarcodeDraft();
-  return prisma.barcode.create({ data: { userId, ...barcode } });
+  return prisma.barcode.create({ data: { userId, recipeId: ownedId, ...barcode } });
 }
 
 export async function updateOfficialGtinBarcode(userId: string, barcodeId: string, input: string) {
@@ -36,7 +49,7 @@ export async function associateBarcodeWithRecipe(userId: string, barcodeId: stri
   if (!barcode) return null;
 
   if (recipeId === null) {
-    return prisma.barcode.update({ where: { id: barcode.id }, data: { recipeId: null } });
+    return prisma.barcode.update({ where: { id: barcode.id, userId }, data: { recipeId: null } });
   }
 
   const recipe = await prisma.recipe.findFirst({
@@ -47,7 +60,7 @@ export async function associateBarcodeWithRecipe(userId: string, barcodeId: stri
   if (!recipe) return null;
   assertBarcodeRecipeOwnership(userId, barcode.userId, recipe.userId);
 
-  return prisma.barcode.update({ where: { id: barcode.id }, data: { recipeId: recipe.id } });
+  return prisma.barcode.update({ where: { id: barcode.id, userId }, data: { recipeId: recipe.id } });
 }
 
 export function deleteBarcode(userId: string, barcodeId: string) {
