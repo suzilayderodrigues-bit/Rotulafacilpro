@@ -19,6 +19,9 @@ model User {
   customIngredients   Ingredient[]
   recipes             Recipe[]
   barcodes            Barcode[]
+  subscriptions       Subscription[]
+  billingCycles       BillingCycle[]
+  barcodeUsages       BarcodeUsage[]
 
   @@map("users")
 }
@@ -90,6 +93,19 @@ enum BarcodeValueFormat {
   GTIN_13
   GTIN_14
   INTERNAL
+}
+
+enum CommercialPlan {
+  FREE
+  MONTHLY
+  ANNUAL
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  ENDED
+  CANCELED
 }
 
 model Ingredient {
@@ -181,10 +197,75 @@ model Barcode {
 
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   recipe Recipe? @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  usage  BarcodeUsage?
 
   @@unique([userId, value])
   @@index([userId])
   @@map("barcodes")
+}
+
+model Subscription {
+  id                     String             @id @default(cuid())
+  userId                 String
+  plan                   CommercialPlan
+  status                 SubscriptionStatus
+  startsAt               DateTime
+  endsAt                 DateTime?
+  currentPeriodStart     DateTime?
+  currentPeriodEnd       DateTime?
+  provider               String?
+  providerSubscriptionId String?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  billingCycles BillingCycle[]
+
+  @@unique([provider, providerSubscriptionId])
+  @@unique([id, userId])
+  @@index([userId, status, startsAt])
+  @@map("subscriptions")
+}
+
+model BillingCycle {
+  id               String         @id @default(cuid())
+  userId           String
+  subscriptionId   String
+  planSnapshot     CommercialPlan
+  startsAt         DateTime
+  endsAt           DateTime
+  barcodeUsed      Int            @default(0)
+  providerCycleId  String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription Subscription   @relation(fields: [subscriptionId, userId], references: [id, userId], onDelete: Restrict)
+  barcodeUsages BarcodeUsage[]
+
+  @@unique([subscriptionId, startsAt])
+  @@unique([subscriptionId, providerCycleId])
+  @@unique([id, userId])
+  @@index([userId, startsAt, endsAt])
+  @@map("billing_cycles")
+}
+
+model BarcodeUsage {
+  id             String         @id @default(cuid())
+  userId         String
+  barcodeId      String?        @unique
+  billingCycleId String?
+  kind           BarcodeType
+  planSnapshot   CommercialPlan
+  createdAt      DateTime       @default(now())
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  barcode      Barcode?      @relation(fields: [barcodeId], references: [id], onDelete: SetNull)
+  billingCycle BillingCycle? @relation(fields: [billingCycleId, userId], references: [id, userId], onDelete: Restrict)
+
+  @@index([userId, billingCycleId, createdAt])
+  @@index([userId, planSnapshot, createdAt])
+  @@map("barcode_usages")
 }
 
 model RecipeIngredient {
