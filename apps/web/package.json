@@ -12,6 +12,7 @@
   "dependencies": {
     "@rotula-facil-pro/db": "workspace:*",
     "@rotula-facil-pro/ui": "workspace:*",
+    "bwip-js": "4.11.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.468.0",
@@ -23,10 +24,10 @@
     "zod": "^4.0.15"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.2",
-    "@tailwindcss/postcss": "^4.3.3",
     "postcss": "^8.4.49",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.19.2",

@@ -1,5 +1,5 @@
 ﻿import Link from "next/link";
-import { BookOpen, ClipboardList, Database, Home, Menu, Package, Tags, UserCircle } from "lucide-react";
+import { Barcode, BookOpen, ClipboardList, Database, Home, Menu, Package, Tags, UserCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
@@ -7,6 +7,7 @@ const items = [
   { label: "Produtos", href: "/produtos", icon: Package },
   { label: "Ingredientes", href: "/ingredientes", icon: Database },
   { label: "Receitas", href: "/receitas", icon: BookOpen },
+  { label: "Código de Barras", href: "/codigo-de-barras", icon: Barcode },
   { label: "Produções", href: "/producoes", icon: ClipboardList },
   { label: "Etiquetas", href: "/etiquetas", icon: Tags },
   { label: "Minha Conta", href: "/minha-conta", icon: UserCircle }
