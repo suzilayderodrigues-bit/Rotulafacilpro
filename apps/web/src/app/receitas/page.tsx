@@ -1,8 +1,7 @@
 ﻿import Link from "next/link";
-import { BookOpen, MoreHorizontal, Pencil, Plus } from "lucide-react";
+import { BookOpen, Pencil, Plus } from "lucide-react";
 import {
   Badge,
-  Button,
   Card,
   CardDescription,
   CardHeader,
@@ -13,6 +12,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { requireUser } from "@/lib/auth/session";
 import { listRecipes } from "@/lib/recipes/repository";
+import { DeleteRecipeForm } from "./delete-recipe-form";
 
 type RecipeListItem = Awaited<ReturnType<typeof listRecipes>>[number];
 
@@ -118,24 +118,23 @@ function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
       </dl>
 
       <div className="mt-4 grid gap-2 border-t border-[var(--border)] pt-4 sm:grid-cols-3">
-        <Button type="button" variant="outline" className="h-9 w-full" disabled>
+        <Link href={`/receitas/${recipe.id}`} className="flex h-9 w-full items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white text-sm font-semibold text-[var(--brand-petrol)]">
           Abrir
-        </Button>
-        <Button type="button" variant="outline" className="h-9 w-full" disabled>
+        </Link>
+        <Link href={`/receitas/${recipe.id}/editar`} className="flex h-9 w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white text-sm font-semibold text-[var(--brand-petrol)]">
           <Pencil className="size-4" />
           Editar
-        </Button>
-        <Button type="button" variant="ghost" className="h-9 w-full" disabled aria-label="Opções da receita">
-          <MoreHorizontal className="size-4" />
-        </Button>
+        </Link>
+        <DeleteRecipeForm recipeId={recipe.id} />
       </div>
     </article>
   );
 }
 
-export default async function RecipesPage() {
+export default async function RecipesPage({ searchParams }: { searchParams?: Promise<{ status?: string; erro?: string }> }) {
   const user = await requireUser();
   const recipes = await listRecipes(user.id);
+  const query = searchParams ? await searchParams : {};
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
@@ -164,6 +163,9 @@ export default async function RecipesPage() {
                 </Link>
               </div>
             </section>
+
+            {query.status === "excluida" ? <p role="status" className="mb-5 rounded-[var(--radius-md)] border border-[#b9ded5] bg-[#f1faf7] px-4 py-3 text-sm">Receita excluída. O código de barras associado foi preservado.</p> : null}
+            {query.erro ? <p role="alert" className="mb-5 rounded-[var(--radius-md)] border border-[#f0c4c0] bg-[var(--error-bg)] px-4 py-3 text-sm">Receita não encontrada nesta conta.</p> : null}
 
             <Card className="shadow-none">
               <CardHeader className="flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

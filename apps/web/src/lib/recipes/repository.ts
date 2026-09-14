@@ -99,7 +99,21 @@ export async function updateRecipe(userId: string, recipeId: string, input: Upda
 
   return prisma.recipe.update({
     where: { id: current.id },
-    data
+    data: input.physicalState && input.physicalState !== current.physicalState
+      ? {
+          ...data,
+          finalYieldAmount: null,
+          unitsProduced: null,
+          unitWeight: null,
+          netQuantity: null,
+          netQuantityUnit: null,
+          servingSize: null,
+          servingUnit: null,
+          householdMeasure: null,
+          servingsPerPackage: null,
+          isIndividualPackage: false
+        }
+      : data
   });
 }
 

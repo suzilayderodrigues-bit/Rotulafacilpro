@@ -125,7 +125,10 @@ export default async function RecipeInformationStepPage({ params, searchParams }
     );
   }
 
-  const allergenSuggestions = uniqueSorted(recipe.ingredients.flatMap((item) => item.ingredient.allergens));
+  const allergenSuggestions = uniqueSorted([
+    ...recipe.ingredients.flatMap((item) => item.ingredient.allergens),
+    ...recipe.confirmedAllergens
+  ]);
   const hasUnknownAllergens = recipe.ingredients.some((item) => item.ingredient.allergens.length === 0);
   const glutenKnownTrue = recipe.ingredients.some((item) => item.ingredient.containsGluten === true);
   const glutenKnownFalse = recipe.ingredients.some((item) => item.ingredient.containsGluten === false);

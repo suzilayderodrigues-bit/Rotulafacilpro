@@ -29,6 +29,16 @@ export function NutritionFactsTable({ model }: NutritionFactsTableProps) {
         {model.statusMessage}
       </p>
 
+      {model.missingNutrients.length > 0 ? (
+        <div className="mb-4 rounded-[var(--radius-md)] border border-[#f4d5b6] bg-[#fff8f0] px-4 py-3 text-sm leading-6 text-[#8a4b15]">
+          <p className="font-semibold">Faltam dados para concluir a tabela:</p>
+          <ul className="mt-1 list-inside list-disc">
+            {model.missingNutrients.map((nutrient) => <li key={nutrient}>{nutrient}</li>)}
+          </ul>
+          <p className="mt-2">Revise os dados nutricionais dos ingredientes desta receita. Um ou mais ingredientes podem estar incompletos; valores ausentes não são tratados como zero.</p>
+        </div>
+      ) : null}
+
       <div className="overflow-x-auto pb-1">
         <div className="min-w-[34rem] max-w-[40rem] border-[3px] border-black bg-white font-sans text-black">
           <div className="px-3 py-2">

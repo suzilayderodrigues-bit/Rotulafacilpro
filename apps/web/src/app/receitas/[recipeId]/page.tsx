@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AlertCircle, Edit3, FlaskConical, Lock, Package, Scale, TableProperties } from "lucide-react";
-import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, EmptyState } from "@/components/design-system";
+import { Badge, Card, CardDescription, CardHeader, CardTitle, EmptyState } from "@/components/design-system";
 import { Sidebar } from "@/components/layout/sidebar";
 import { NutritionFactsTable } from "@/components/nutrition/nutrition-facts-table";
 import { FrontOfPackNutritionPreview } from "@/components/nutrition/front-of-pack-nutrition-preview";
@@ -440,7 +440,7 @@ export default async function RecipeSummaryPage({ params, searchParams }: Recipe
               <NutritionUnavailable message={nutritionMessage} />
             )}
 
-            <Card className="mt-5 shadow-none">
+            <Card id="tabela-nutricional" className="mt-5 scroll-mt-5 shadow-none">
               <CardHeader className="flex-col">
                 <div className="flex size-10 items-center justify-center rounded-[var(--radius-md)] bg-[#e8f7fa] text-[var(--brand-petrol)]">
                   <TableProperties className="size-5" />
@@ -573,7 +573,7 @@ export default async function RecipeSummaryPage({ params, searchParams }: Recipe
                 <Link href={"/receitas/" + recipe.id + "/rendimento"} className="inline-flex h-10 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white px-4 text-sm font-semibold text-[var(--brand-petrol)] transition hover:bg-[var(--surface-muted)]">
                   Editar rendimento
                 </Link>
-                <Button type="button" disabled>Gerar tabela nutricional</Button>
+                <Link href="#tabela-nutricional" className="inline-flex h-10 items-center justify-center rounded-[var(--radius-md)] border border-[var(--brand-tiffany)] bg-[var(--brand-tiffany)] px-4 text-sm font-semibold text-[var(--brand-navy)]">Ver tabela nutricional</Link>
               </div>
             </Card>
           </div>

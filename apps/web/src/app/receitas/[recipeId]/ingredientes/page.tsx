@@ -16,7 +16,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { requireUser } from "@/lib/auth/session";
 import { listAccessibleIngredients } from "@/lib/ingredients/repository";
-import { addRecipeIngredientAction, removeRecipeIngredientAction } from "@/lib/recipes/actions";
+import { addRecipeIngredientAction, removeRecipeIngredientAction, updateRecipeIngredientAction } from "@/lib/recipes/actions";
 import { findRecipe } from "@/lib/recipes/repository";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +32,7 @@ const steps = ["Produto", "Ingredientes", "Rendimento", "Informações"];
 
 const statusMessages: Record<string, string> = {
   adicionado: "Ingrediente adicionado à receita.",
+  atualizado: "Quantidade atualizada.",
   removido: "Ingrediente removido da receita.",
   quantidade: "Informe uma quantidade maior que zero.",
   duplicado: "Este ingrediente já foi adicionado à receita.",
@@ -56,14 +57,6 @@ function unitLabel(unit: string) {
 
 function sourceLabel(source: string) {
   return source === "CUSTOM" ? "Meu ingrediente" : "Base Rotula";
-}
-
-function formatDecimal(value: unknown) {
-  if (value === null || value === undefined) return "";
-  const numberValue = Number(value);
-  if (!Number.isFinite(numberValue)) return "";
-
-  return numberValue.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
 }
 
 function ingredientsHref(recipeId: string, search?: string) {
@@ -155,9 +148,15 @@ function RecipeIngredientRow({ item, recipeId }: { item: RecipeItem; recipeId: s
           <p className="mt-1 text-xs font-medium text-[var(--muted)]">{sourceLabel(item.ingredient.source)}</p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <p className="text-sm font-semibold text-[var(--brand-petrol)]">
-            {formatDecimal(item.amount)} {unitLabel(item.unit)}
-          </p>
+          <form action={updateRecipeIngredientAction} className="flex flex-wrap items-center gap-2">
+            <input type="hidden" name="recipeId" value={recipeId} />
+            <input type="hidden" name="recipeIngredientId" value={item.id} />
+            <input type="hidden" name="unit" value={item.unit} />
+            <Label htmlFor={`amount-saved-${item.id}`} className="sr-only">Quantidade de {item.ingredient.name}</Label>
+            <Input id={`amount-saved-${item.id}`} name="amount" type="number" min="0.01" step="0.01" inputMode="decimal" defaultValue={Number(item.amount)} required className="w-24" />
+            <span className="text-sm">{unitLabel(item.unit)}</span>
+            <Button type="submit" variant="outline" className="h-9">Salvar</Button>
+          </form>
           <form action={removeRecipeIngredientAction}>
             <input type="hidden" name="recipeId" value={recipeId} />
             <input type="hidden" name="recipeIngredientId" value={item.id} />
@@ -218,8 +217,8 @@ export default async function RecipeIngredientsStepPage({ params, searchParams }
         <div className="min-w-0 flex-1">
           <div className="mx-auto w-full max-w-6xl px-5 py-6 lg:px-8 lg:py-8">
             <div className="mb-5">
-              <Link href="/receitas" className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand-petrol)] hover:text-[var(--accent-orange)]">
-                Voltar para receitas
+              <Link href={`/receitas/${recipe.id}/editar`} className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand-petrol)] hover:text-[var(--accent-orange)]">
+                Voltar aos dados do produto
               </Link>
             </div>
 
@@ -238,7 +237,7 @@ export default async function RecipeIngredientsStepPage({ params, searchParams }
             <div className="mb-6"><Stepper /></div>
 
             {status ? (
-              <Toast className={cn("mb-5", !["adicionado", "removido"].includes(status) && "border-[#f0c4c0]")}>{statusMessages[status] ?? statusMessages.formulario}</Toast>
+              <Toast className={cn("mb-5", !["adicionado", "removido", "atualizado"].includes(status) && "border-[#f0c4c0]")}>{statusMessages[status] ?? statusMessages.formulario}</Toast>
             ) : null}
 
             <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">

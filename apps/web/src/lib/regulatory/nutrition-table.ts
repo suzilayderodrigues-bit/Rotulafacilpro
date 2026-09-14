@@ -57,6 +57,7 @@ export type NutritionTableRow = {
 export type NutritionTableViewModel = {
   status: NutritionTableStatus;
   statusMessage: string;
+  missingNutrients: string[];
   configurationRequired: boolean;
   basisLabel: "100 g" | "100 ml";
   servingLabel: string | null;
@@ -147,6 +148,11 @@ export function buildNutritionTableViewModel(
 
   return {
     status,
+    missingNutrients: configurationRequired
+      ? []
+      : nutritionTableRowDefinitions
+          .filter((definition) => !nutrientIsComplete(declaration.nutrients[definition.nutrient]))
+          .map((definition) => definition.label),
     statusMessage: configurationRequired
       ? "Defina a porção e os dados da embalagem para gerar a tabela nutricional."
       : status === "COMPLETE"
