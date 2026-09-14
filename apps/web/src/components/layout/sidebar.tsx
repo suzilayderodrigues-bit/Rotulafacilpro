@@ -7,6 +7,7 @@ const items = [
   { label: "Produtos", href: "/produtos", icon: Package },
   { label: "Ingredientes", href: "/ingredientes", icon: Database },
   { label: "Receitas", href: "/receitas", icon: BookOpen },
+  { label: "Rótulo Final", href: "/rotulo-final", icon: Tags },
   { label: "Código de Barras", href: "/codigo-de-barras", icon: Barcode },
   { label: "Produções", href: "/producoes", icon: ClipboardList },
   { label: "Etiquetas", href: "/etiquetas", icon: Tags },

@@ -55,8 +55,8 @@ const shortcuts = [
   },
   {
     title: "Gerar rótulo",
-    description: "Espaço reservado para criação de rótulos.",
-    href: "/rotulos/novo",
+    description: "Veja a prévia técnica do rótulo da sua receita.",
+    href: "/rotulo-final",
     icon: Tags
   }
 ];
