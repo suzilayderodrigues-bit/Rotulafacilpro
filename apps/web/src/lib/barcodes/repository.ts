@@ -4,6 +4,7 @@ import {
   createInternalBarcodeDraft,
   validateOfficialGtin
 } from "./domain";
+import { createBarcodeWithEntitlement } from "./commercial";
 
 export function listBarcodes(userId: string) {
   return prisma.barcode.findMany({ where: { userId }, orderBy: { updatedAt: "desc" } });
@@ -13,27 +14,18 @@ export function findBarcode(userId: string, barcodeId: string) {
   return prisma.barcode.findFirst({ where: { id: barcodeId, userId } });
 }
 
-async function ownedRecipeId(userId: string, recipeId: string | null) {
-  if (recipeId === null) return null;
-  const recipe = await prisma.recipe.findFirst({ where: { id: recipeId, userId }, select: { id: true } });
-  if (!recipe) throw new Error("RECIPE_NOT_FOUND");
-  return recipe.id;
-}
-
 export function findBarcodeByRecipe(userId: string, recipeId: string) {
   return prisma.barcode.findFirst({ where: { userId, recipeId } });
 }
 
 export async function createOfficialGtinBarcode(userId: string, input: string, recipeId: string | null = null) {
   const barcode = validateOfficialGtin(input);
-  const ownedId = await ownedRecipeId(userId, recipeId);
-  return prisma.barcode.create({ data: { userId, recipeId: ownedId, ...barcode } });
+  return createBarcodeWithEntitlement(userId, barcode, recipeId);
 }
 
 export async function createInternalBarcode(userId: string, recipeId: string | null = null) {
-  const ownedId = await ownedRecipeId(userId, recipeId);
   const barcode = createInternalBarcodeDraft();
-  return prisma.barcode.create({ data: { userId, recipeId: ownedId, ...barcode } });
+  return createBarcodeWithEntitlement(userId, barcode, recipeId);
 }
 
 export async function updateOfficialGtinBarcode(userId: string, barcodeId: string, input: string) {

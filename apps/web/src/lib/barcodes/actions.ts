@@ -3,12 +3,24 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
 import { BarcodeValidationError } from "./domain";
+import { BarcodeEntitlementError } from "./commercial";
 import { associateBarcodeWithRecipe, createInternalBarcode, createOfficialGtinBarcode, deleteBarcode, findBarcodeByRecipe } from "./repository";
 
 const pagePath = "/codigo-de-barras";
 
 function isDuplicate(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error && error.code === "P2002";
+}
+
+function entitlementStatus(error: BarcodeEntitlementError) {
+  const statuses: Record<BarcodeEntitlementError["code"], string> = {
+    FREE_LIMIT_REACHED: "limite-gratis",
+    MONTHLY_LIMIT_REACHED: "limite-mensal",
+    MISSING_BILLING_CYCLE: "ciclo-indisponivel",
+    SUBSCRIPTION_REQUIRES_REVIEW: "plano-revisao",
+    RECIPE_NOT_FOUND: "receita-nao-encontrada"
+  };
+  return statuses[error.code];
 }
 
 function recipeIdFromForm(formData: FormData) {
@@ -33,10 +45,10 @@ export async function createOfficialBarcodeAction(formData: FormData) {
   } catch (error) {
     if (error instanceof BarcodeValidationError) {
       status = error.code === "invalid-length" ? "comprimento" : error.code === "invalid-check-digit" ? "digito" : "gtin-invalido";
+    } else if (error instanceof BarcodeEntitlementError) {
+      status = entitlementStatus(error);
     } else if (isDuplicate(error)) {
       status = await duplicateStatus(user.id, recipeId);
-    } else if (error instanceof Error && error.message === "RECIPE_NOT_FOUND") {
-      status = "receita-nao-encontrada";
     }
   }
 
@@ -52,8 +64,8 @@ export async function createInternalBarcodeAction(formData: FormData) {
     await createInternalBarcode(user.id, recipeId);
     status = "interno-criado";
   } catch (error) {
-    if (isDuplicate(error)) status = await duplicateStatus(user.id, recipeId);
-    else if (error instanceof Error && error.message === "RECIPE_NOT_FOUND") status = "receita-nao-encontrada";
+    if (error instanceof BarcodeEntitlementError) status = entitlementStatus(error);
+    else if (isDuplicate(error)) status = await duplicateStatus(user.id, recipeId);
   }
 
   redirect(`${pagePath}?status=${status}`);
