@@ -1,7 +1,7 @@
 import type { FinalLabelPreview } from "./preview";
 
 export const labelFormats = {
-  CINTA: { name: "Cinta", widthMm: 170, heightMm: 50, description: "Faixa horizontal para embalagens semelhantes a palha italiana e brownie.", preset: "Dimensão inicial: 170 × 50 mm." },
+  CINTA: { name: "Cinta", widthMm: 50, heightMm: 170, description: "Faixa vertical para embalagens semelhantes a palha italiana e brownie.", preset: "Dimensão inicial: 50 × 170 mm." },
   POTE: { name: "Pote", widthMm: 100, heightMm: 70, description: "Retângulo inicial para visualização em pote.", preset: "Preset demonstrativo do MVP; confirme as medidas do seu pote." },
   POUCH: { name: "Stand-up pouch", widthMm: 100, heightMm: 140, description: "Retângulo vertical inicial para stand-up pouch.", preset: "Preset demonstrativo do MVP; confirme as medidas do seu pouch." }
 } as const;

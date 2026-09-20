@@ -33,7 +33,7 @@ export type FinalLabelPreview = {
   crossContaminationAllergens: string[];
   nutritionTable: NutritionTableViewModel | null;
   frontOfPack: FinalFrontOfPackDecision | null;
-  barcode: { value: string; type: Barcode["type"]; display: BarcodeRenderResult } | null;
+  barcode: { value: string; type: Barcode["type"]; format: Barcode["format"]; display: BarcodeRenderResult } | null;
   issues: FinalLabelIssue[];
   status: FinalLabelStatus;
 };
@@ -110,7 +110,7 @@ export function composeFinalLabelPreview(recipe: Recipe, barcode: Barcode | null
     add("MISSING_BARCODE", "WARNING", "Código de barras ainda não associado.");
   } else {
     try {
-      barcodePreview = { value: barcode.value, type: barcode.type, display: renderBarcodeSvg(barcode) };
+      barcodePreview = { value: barcode.value, type: barcode.type, format: barcode.format, display: renderBarcodeSvg(barcode) };
       if (barcodePreview.display.status === "UNAVAILABLE") add("BARCODE_UNAVAILABLE", "WARNING", "A imagem do código de barras não está disponível nesta prévia.");
     } catch {
       add("BARCODE_UNAVAILABLE", "WARNING", "O código de barras associado precisa ser revisado.");

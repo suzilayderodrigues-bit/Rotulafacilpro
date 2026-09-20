@@ -6,6 +6,7 @@ import { NutritionFactsTable } from "@/components/nutrition/nutrition-facts-tabl
 import { FrontOfPackNutritionPreview } from "@/components/nutrition/front-of-pack-nutrition-preview";
 import { requireUser } from "@/lib/auth/session";
 import { buildFinalLabelPreview } from "@/lib/final-label/preview";
+import { assessFinalLabelPdf } from "@/lib/final-label/pdf";
 import { assessLabelLayout, labelFormats, labelPreviewHref, labelTemplates, resolveLabelFormat, resolveLabelTemplate } from "@/lib/final-label/visual";
 import { listRecipes } from "@/lib/recipes/repository";
 import { VisualLabelFrame } from "./visual-preview";
@@ -35,6 +36,7 @@ export default async function FinalLabelPage({ searchParams }: {
   const selectedRecipeId = requestedRecipeId ?? recipes[0]?.id;
   const preview = selectedRecipeId ? await buildFinalLabelPreview(selectedRecipeId, user.id) : null;
   const layout = preview ? assessLabelLayout(preview, format) : null;
+  const pdfAssessment = preview ? assessFinalLabelPdf(preview, format) : null;
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
@@ -46,7 +48,7 @@ export default async function FinalLabelPage({ searchParams }: {
             <section className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-white p-5 sm:p-6">
               <Badge variant="secondary">Rótulo Final</Badge>
               <h1 className="mt-4 text-2xl font-semibold sm:text-3xl">Rótulo Final</h1>
-              <p className="mt-2 text-sm text-[var(--muted)]">Veja como as informações do seu produto serão organizadas no rótulo. Esta é uma prévia técnica, ainda sem impressão ou PDF.</p>
+              <p className="mt-2 text-sm text-[var(--muted)]">Veja como as informações do seu produto serão organizadas no rótulo e baixe o PDF quando todos os dados estiverem prontos.</p>
             </section>
 
             {recipes.length === 0 ? (
@@ -141,6 +143,17 @@ export default async function FinalLabelPage({ searchParams }: {
                         <CardHeader className="flex-col"><CardTitle>Status do rótulo</CardTitle><CardDescription>{preview.status === "READY" ? "Dados disponíveis para esta prévia técnica." : preview.status === "REQUIRES_REVIEW" ? "Há pontos que exigem revisão." : "Há informações que impedem concluir o rótulo."}</CardDescription></CardHeader>
                         <Badge variant="secondary">{preview.status === "READY" ? "Pronto para revisão visual" : preview.status === "INCOMPLETE" ? "Incompleto" : "Requer revisão"}</Badge>
                         {preview.issues.length ? <ul className="mt-4 space-y-3">{preview.issues.map((issue) => <li key={issue.code} className="rounded-[var(--radius-md)] border border-[var(--border)] p-3 text-sm"><span className="font-semibold">{issue.severity === "WARNING" ? "Aviso" : issue.severity === "REVIEW" ? "Revisão" : "Bloqueio"}: </span>{issue.message}</li>)}</ul> : <p className="mt-4 text-sm">Nenhuma pendência identificada pelos dados disponíveis.</p>}
+                      </Card>
+                      <Card className="shadow-none">
+                        <CardHeader className="flex-col"><CardTitle>PDF do rótulo</CardTitle><CardDescription>O arquivo usa o formato físico e o modelo visual selecionados acima.</CardDescription></CardHeader>
+                        {pdfAssessment?.allowed ? (
+                          <a href={`/rotulo-final/${preview.recipeId}/download?format=${encodeURIComponent(format)}&template=${encodeURIComponent(template)}`} className="inline-flex h-10 w-full items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-tiffany)] px-4 text-sm font-semibold text-[var(--brand-navy)]">Baixar PDF</a>
+                        ) : (
+                          <div className="rounded-[var(--radius-md)] border border-[#f4d5b6] bg-[#fff8f0] p-3 text-sm text-[#8a4b15]">
+                            <p className="font-semibold">PDF indisponível</p>
+                            <p className="mt-1">{pdfAssessment?.message}</p>
+                          </div>
+                        )}
                       </Card>
                       <Link href={`/receitas/${preview.recipeId}/editar`} className="inline-flex h-10 w-full items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white px-4 text-sm font-semibold text-[var(--brand-petrol)]">Editar receita</Link>
                     </aside>

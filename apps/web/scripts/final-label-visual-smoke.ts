@@ -11,8 +11,8 @@ const technical = {
   issues: [], status: "READY"
 } as FinalLabelPreview;
 
-assert.deepEqual([labelFormats.CINTA.widthMm, labelFormats.CINTA.heightMm], [170, 50]);
-assert.equal(labelFormats.CINTA.widthMm / labelFormats.CINTA.heightMm, 3.4);
+assert.deepEqual([labelFormats.CINTA.widthMm, labelFormats.CINTA.heightMm], [50, 170]);
+assert.equal(labelFormats.CINTA.heightMm / labelFormats.CINTA.widthMm, 3.4);
 assert(labelFormats.POTE.widthMm > 0 && labelFormats.POTE.heightMm > 0);
 assert(labelFormats.POUCH.heightMm > labelFormats.POUCH.widthMm);
 assert.deepEqual(Object.keys(labelTemplates), ["ESSENCIAL", "CLEAN", "DESTAQUE"]);

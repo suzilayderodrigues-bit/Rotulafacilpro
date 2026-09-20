@@ -14,7 +14,7 @@ export function VisualLabelFrame({ preview, format, template }: {
 }) {
   const dimensions = labelFormats[format];
   const style = templateStyle[template];
-  const horizontal = format === "CINTA";
+  const horizontal = dimensions.widthMm > dimensions.heightMm;
 
   return (
     <div className="min-w-0">
