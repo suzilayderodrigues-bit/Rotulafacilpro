@@ -1,6 +1,7 @@
 import { getCurrentUser } from "@/lib/auth/session";
 import { buildFinalLabelPreview } from "@/lib/final-label/preview";
 import { renderFinalLabelPdf } from "@/lib/final-label/pdf";
+import { finalLabelContentDisposition } from "@/lib/final-label/production";
 import { resolveLabelFormat, resolveLabelTemplate } from "@/lib/final-label/visual";
 
 export const runtime = "nodejs";
@@ -16,6 +17,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ reci
   const url = new URL(request.url);
   const format = resolveLabelFormat(url.searchParams.get("format") ?? undefined);
   const template = resolveLabelTemplate(url.searchParams.get("template") ?? undefined);
+  const mode = url.searchParams.get("mode");
   const result = await renderFinalLabelPdf(preview, format, template);
   if (result.status === "BLOCKED") {
     return Response.json({ code: result.assessment.code, message: result.assessment.message }, { status: 409 });
@@ -24,7 +26,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ reci
   return new Response(Uint8Array.from(result.buffer), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${result.filename}"`,
+      "Content-Disposition": finalLabelContentDisposition(result.filename, mode),
       "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff"
     }

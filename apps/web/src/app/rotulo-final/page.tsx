@@ -6,7 +6,7 @@ import { NutritionFactsTable } from "@/components/nutrition/nutrition-facts-tabl
 import { FrontOfPackNutritionPreview } from "@/components/nutrition/front-of-pack-nutrition-preview";
 import { requireUser } from "@/lib/auth/session";
 import { buildFinalLabelPreview } from "@/lib/final-label/preview";
-import { assessFinalLabelPdf } from "@/lib/final-label/pdf";
+import { prepareFinalLabelProduction } from "@/lib/final-label/production";
 import { assessLabelLayout, labelFormats, labelPreviewHref, labelTemplates, resolveLabelFormat, resolveLabelTemplate } from "@/lib/final-label/visual";
 import { listRecipes } from "@/lib/recipes/repository";
 import { VisualLabelFrame } from "./visual-preview";
@@ -36,7 +36,7 @@ export default async function FinalLabelPage({ searchParams }: {
   const selectedRecipeId = requestedRecipeId ?? recipes[0]?.id;
   const preview = selectedRecipeId ? await buildFinalLabelPreview(selectedRecipeId, user.id) : null;
   const layout = preview ? assessLabelLayout(preview, format) : null;
-  const pdfAssessment = preview ? assessFinalLabelPdf(preview, format) : null;
+  const production = preview ? prepareFinalLabelProduction(preview, format, template) : null;
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
@@ -145,13 +145,29 @@ export default async function FinalLabelPage({ searchParams }: {
                         {preview.issues.length ? <ul className="mt-4 space-y-3">{preview.issues.map((issue) => <li key={issue.code} className="rounded-[var(--radius-md)] border border-[var(--border)] p-3 text-sm"><span className="font-semibold">{issue.severity === "WARNING" ? "Aviso" : issue.severity === "REVIEW" ? "Revisão" : "Bloqueio"}: </span>{issue.message}</li>)}</ul> : <p className="mt-4 text-sm">Nenhuma pendência identificada pelos dados disponíveis.</p>}
                       </Card>
                       <Card className="shadow-none">
-                        <CardHeader className="flex-col"><CardTitle>PDF do rótulo</CardTitle><CardDescription>O arquivo usa o formato físico e o modelo visual selecionados acima.</CardDescription></CardHeader>
-                        {pdfAssessment?.allowed ? (
-                          <a href={`/rotulo-final/${preview.recipeId}/download?format=${encodeURIComponent(format)}&template=${encodeURIComponent(template)}`} className="inline-flex h-10 w-full items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-tiffany)] px-4 text-sm font-semibold text-[var(--brand-navy)]">Baixar PDF</a>
+                        <CardHeader className="flex-col"><CardTitle>{production?.allowed ? "Pronto para imprimir" : "PDF do rótulo"}</CardTitle><CardDescription>O arquivo usa o formato físico e o modelo visual selecionados acima.</CardDescription></CardHeader>
+                        {production?.allowed ? (
+                          <div className="space-y-4">
+                            <dl className="grid grid-cols-1 gap-2 rounded-[var(--radius-md)] border border-[var(--border)] p-3 text-sm sm:grid-cols-2">
+                              <div><dt className="text-[var(--muted)]">Formato</dt><dd className="font-semibold">{production.formatName}</dd></div>
+                              <div><dt className="text-[var(--muted)]">Dimensões</dt><dd className="font-semibold">{production.widthMm} × {production.heightMm} mm</dd></div>
+                              <div><dt className="text-[var(--muted)]">Orientação</dt><dd className="font-semibold">{production.orientation}</dd></div>
+                              <div><dt className="text-[var(--muted)]">Escala do arquivo</dt><dd className="font-semibold">Tamanho real</dd></div>
+                            </dl>
+                            <p className="text-sm">O PDF foi preparado no tamanho físico real do rótulo.</p>
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                              <a href={production.downloadHref} className="inline-flex h-10 w-full items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-tiffany)] px-4 text-sm font-semibold text-[var(--brand-navy)]">Baixar PDF</a>
+                              <a href={production.printHref} target="_blank" rel="noopener noreferrer" className="inline-flex h-10 w-full items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white px-4 text-sm font-semibold text-[var(--brand-petrol)]">Imprimir</a>
+                            </div>
+                            <div className="rounded-[var(--radius-md)] bg-[var(--surface-muted)] p-3 text-xs leading-5 text-[var(--muted)]">
+                              <p>Na janela de impressão, use <strong>Tamanho real</strong> ou <strong>Escala 100%</strong>. Evite “Ajustar à página”.</p>
+                              <p className="mt-1">As opções disponíveis podem variar conforme o navegador, o leitor de PDF e a impressora.</p>
+                            </div>
+                          </div>
                         ) : (
                           <div className="rounded-[var(--radius-md)] border border-[#f4d5b6] bg-[#fff8f0] p-3 text-sm text-[#8a4b15]">
                             <p className="font-semibold">PDF indisponível</p>
-                            <p className="mt-1">{pdfAssessment?.message}</p>
+                            <p className="mt-1">{production?.assessment.message}</p>
                           </div>
                         )}
                       </Card>
