@@ -2,8 +2,8 @@ import Link from "next/link";
 import {
   ArrowRight,
   ClipboardList,
+  Database,
   FileText,
-  Package,
   Plus,
   Tags,
   UserCircle
@@ -14,9 +14,7 @@ import {
   Card,
   CardDescription,
   CardHeader,
-  CardTitle,
-  EmptyState,
-  StatCard
+  CardTitle
 } from "@/components/design-system";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
@@ -24,34 +22,23 @@ import { logoutAction } from "@/lib/auth/actions";
 import { cn } from "@/lib/utils";
 import { requireUser } from "@/lib/auth/session";
 
-const stats = [
-  { label: "Produtos cadastrados", value: "0", helper: "Módulo em próxima sprint" },
-  { label: "Tabelas nutricionais", value: "0", helper: "Base ainda não iniciada" },
-  { label: "Rótulos gerados", value: "0", helper: "Geração futura" }
-];
-
 const buttonLinkClasses = cn(
   "inline-flex h-10 items-center justify-center gap-2 rounded-[var(--radius-md)] border px-4 text-sm font-semibold transition-colors",
   "border-[var(--brand-tiffany)] bg-[var(--brand-tiffany)] text-[var(--brand-navy)] hover:bg-[#1294a5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)] focus-visible:ring-offset-2"
 );
 
-const outlineLinkClasses = cn(
-  "inline-flex h-10 items-center justify-center gap-2 rounded-[var(--radius-md)] border px-4 text-sm font-semibold transition-colors",
-  "border-[var(--border-strong)] bg-white text-[var(--brand-petrol)] hover:bg-[var(--surface-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-tiffany)] focus-visible:ring-offset-2"
-);
-
 const shortcuts = [
   {
-    title: "Criar novo produto",
-    description: "Inicie a estrutura do próximo produto.",
-    href: "/produtos/novo",
+    title: "Criar nova receita",
+    description: "Comece o cadastro de um produto pela receita.",
+    href: "/receitas/nova",
     icon: Plus
   },
   {
-    title: "Meus produtos",
-    description: "Acompanhe os cadastros quando o módulo existir.",
-    href: "/produtos",
-    icon: Package
+    title: "Ingredientes",
+    description: "Consulte a base e gerencie seus ingredientes.",
+    href: "/ingredientes",
+    icon: Database
   },
   {
     title: "Gerar rótulo",
@@ -78,25 +65,13 @@ export default async function DashboardPage() {
                   Olá, {user.name} 👋
                 </h1>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)] sm:text-base">
-                  Seu próximo produto profissional começa aqui.
+                  Continue suas receitas, rótulos e etiquetas em um só lugar.
                 </p>
               </div>
-              <Link href="/produtos/novo" className={cn(buttonLinkClasses, "w-full sm:w-auto")}>
+              <Link href="/receitas/nova" className={cn(buttonLinkClasses, "w-full sm:w-auto")}>
                 <Plus className="size-4" />
-                Criar novo produto
+                Criar nova receita
               </Link>
-            </section>
-
-            <section className="grid gap-4 md:grid-cols-3" aria-label="Resumo do Dashboard">
-              {stats.map((stat) => (
-                <StatCard
-                  key={stat.label}
-                  label={stat.label}
-                  value={stat.value}
-                  helper={stat.helper}
-                  className="shadow-none"
-                />
-              ))}
             </section>
 
             <section className="mt-6 grid min-w-0 gap-6 xl:grid-cols-[1.6fr_0.8fr]">
@@ -105,7 +80,7 @@ export default async function DashboardPage() {
                   <CardHeader>
                     <div>
                       <CardTitle>Atalhos</CardTitle>
-                      <CardDescription>Acessos rápidos preparados para os próximos módulos.</CardDescription>
+                      <CardDescription>Acesse os módulos principais do seu trabalho.</CardDescription>
                     </div>
                   </CardHeader>
                   <div className="grid gap-3 md:grid-cols-3">
@@ -141,20 +116,14 @@ export default async function DashboardPage() {
                 <Card className="shadow-none">
                   <CardHeader>
                     <div>
-                      <CardTitle>Produtos recentes</CardTitle>
-                      <CardDescription>Quando houver produtos cadastrados, eles aparecerão aqui.</CardDescription>
+                      <CardTitle>Fluxo principal</CardTitle>
+                      <CardDescription>Cadastre ingredientes, monte a receita e gere o rótulo final.</CardDescription>
                     </div>
                   </CardHeader>
-                  <EmptyState
-                    title="Você ainda não possui produtos cadastrados."
-                    description="Crie seu primeiro produto quando o módulo de produtos for iniciado."
-                    action={
-                      <Link href="/produtos/novo" className={outlineLinkClasses}>
-                        <Plus className="size-4" />
-                        Criar meu primeiro produto
-                      </Link>
-                    }
-                  />
+                  <Link href="/receitas" className={cn(buttonLinkClasses, "w-full sm:w-auto")}>
+                    Ver minhas receitas
+                    <ArrowRight className="size-4" />
+                  </Link>
                 </Card>
               </div>
 
@@ -162,8 +131,8 @@ export default async function DashboardPage() {
                 <Card className="shadow-none">
                   <CardHeader>
                     <div>
-                      <CardTitle>Plano</CardTitle>
-                      <CardDescription>Espaço reservado para informações futuras de uso.</CardDescription>
+                      <CardTitle>Etiquetas</CardTitle>
+                      <CardDescription>Prepare etiquetas de produção para suas receitas.</CardDescription>
                     </div>
                   </CardHeader>
                   <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-muted)] p-4">
@@ -172,16 +141,13 @@ export default async function DashboardPage() {
                         <ClipboardList className="size-5" />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-[var(--foreground)]">Plano atual</p>
-                        <p className="text-sm text-[var(--muted)]">Configuração futura</p>
+                        <p className="text-sm font-semibold text-[var(--foreground)]">Lote e validade</p>
+                        <p className="text-sm text-[var(--muted)]">PDF pronto para impressão</p>
                       </div>
                     </div>
-                    <div className="mt-4 h-2 rounded-full bg-white">
-                      <div className="h-2 w-1/5 rounded-full bg-[var(--accent-orange)]" />
-                    </div>
-                    <p className="mt-3 text-xs leading-5 text-[var(--muted)]">
-                      Sem limites comerciais aplicados nesta sprint.
-                    </p>
+                    <Link href="/etiquetas" className={cn(buttonLinkClasses, "mt-4 w-full")}>
+                      Criar etiquetas
+                    </Link>
                   </div>
                 </Card>
 
