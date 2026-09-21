@@ -54,6 +54,12 @@ export const productionLabelFormats = {
 export type ProductionLabelFormat = keyof typeof productionLabelFormats;
 export const defaultProductionLabelFormat: ProductionLabelFormat = "PADRAO";
 export const maximumProductionLabelQuantity = 999;
+export const productionLabelA4Layout = {
+  widthMm: 210,
+  heightMm: 297,
+  marginMm: 10,
+  gapMm: 3
+} as const;
 
 export type ProductionLabelCompositionAssessment =
   | { status: "READY"; message: null }
@@ -96,9 +102,39 @@ export function parseProductionLabelQuantity(value: string) {
   return quantity;
 }
 
+export function resolveProductionLabelFormat(value: string) {
+  return Object.prototype.hasOwnProperty.call(productionLabelFormats, value)
+    ? value as ProductionLabelFormat
+    : null;
+}
+
 export function productionLabelSummary(quantity: number, format: ProductionLabelFormat) {
   const option = productionLabelFormats[format];
   return `${quantity} ${quantity === 1 ? "etiqueta" : "etiquetas"} • ${option.widthMm} × ${option.heightMm} mm`;
+}
+
+export function calculateProductionLabelA4Layout(format: ProductionLabelFormat, quantity: number) {
+  const option = productionLabelFormats[format];
+  const { widthMm, heightMm, marginMm, gapMm } = productionLabelA4Layout;
+  const usableWidthMm = widthMm - marginMm * 2;
+  const usableHeightMm = heightMm - marginMm * 2;
+  const columns = Math.floor((usableWidthMm + gapMm) / (option.widthMm + gapMm));
+  const rows = Math.floor((usableHeightMm + gapMm) / (option.heightMm + gapMm));
+  const labelsPerPage = columns * rows;
+  const pageCount = Math.ceil(quantity / labelsPerPage);
+
+  return {
+    pageWidthMm: widthMm,
+    pageHeightMm: heightMm,
+    marginMm,
+    gapMm,
+    usableWidthMm,
+    usableHeightMm,
+    columns,
+    rows,
+    labelsPerPage,
+    pageCount
+  };
 }
 
 function estimatedWrappedLines(text: string, charactersPerLine: number) {

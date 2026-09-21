@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Card, CardDescription, CardHeader, CardTitle, Input, Label, Select } from "@/components/design-system";
+import { Button, Card, CardDescription, CardHeader, CardTitle, Input, Label, Select } from "@/components/design-system";
 import {
   assessProductionLabelComposition,
   buildProductionLabelPreview,
+  calculateProductionLabelA4Layout,
   defaultProductionLabelFormat,
   maximumProductionLabelQuantity,
   parseProductionLabelQuantity,
@@ -25,6 +26,44 @@ const previewClasses: Record<ProductionLabelFormat, string> = {
   PADRAO: "max-w-[26rem] px-5 py-4 text-xs"
 };
 
+type PdfMode = "INDIVIDUAL" | "A4";
+
+function ProductionLabelPdfForm({
+  recipeId,
+  lot,
+  manufacturedAt,
+  expiresAt,
+  format,
+  quantity,
+  mode,
+  intent
+}: {
+  recipeId: string;
+  lot: string;
+  manufacturedAt: string;
+  expiresAt: string;
+  format: ProductionLabelFormat;
+  quantity: number;
+  mode: PdfMode;
+  intent: "download" | "print";
+}) {
+  return (
+    <form method="POST" action="/etiquetas/pdf" target={intent === "print" ? "_blank" : undefined} className="w-full">
+      <input type="hidden" name="recipeId" value={recipeId} />
+      <input type="hidden" name="lot" value={lot} />
+      <input type="hidden" name="manufacturedAt" value={manufacturedAt} />
+      <input type="hidden" name="expiresAt" value={expiresAt} />
+      <input type="hidden" name="format" value={format} />
+      <input type="hidden" name="quantity" value={quantity} />
+      <input type="hidden" name="mode" value={mode} />
+      <input type="hidden" name="intent" value={intent} />
+      <Button type="submit" variant={intent === "download" ? "primary" : "outline"} className="w-full">
+        {intent === "download" ? "Baixar PDF" : "Imprimir"}
+      </Button>
+    </form>
+  );
+}
+
 export function ProductionLabelForm({ recipes }: ProductionLabelFormProps) {
   const [recipeId, setRecipeId] = useState("");
   const [lot, setLot] = useState("");
@@ -32,6 +71,7 @@ export function ProductionLabelForm({ recipes }: ProductionLabelFormProps) {
   const [expiresAt, setExpiresAt] = useState("");
   const [format, setFormat] = useState<ProductionLabelFormat>(defaultProductionLabelFormat);
   const [quantityInput, setQuantityInput] = useState("1");
+  const [pdfMode, setPdfMode] = useState<PdfMode>("INDIVIDUAL");
 
   const input = useMemo(() => ({ recipeId, lot, manufacturedAt, expiresAt }), [expiresAt, lot, manufacturedAt, recipeId]);
   const validation = useMemo(() => validateProductionLabelInput(recipes, input), [input, recipes]);
@@ -40,6 +80,7 @@ export function ProductionLabelForm({ recipes }: ProductionLabelFormProps) {
   const composition = useMemo(() => assessProductionLabelComposition(preview, format), [format, preview]);
   const formatOption = productionLabelFormats[format];
   const isReady = validation.valid && quantity !== null && composition.status === "READY";
+  const a4Layout = quantity === null ? null : calculateProductionLabelA4Layout(format, quantity);
 
   return (
     <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,0.75fr)]">
@@ -158,8 +199,8 @@ export function ProductionLabelForm({ recipes }: ProductionLabelFormProps) {
         </Card>
       </div>
 
-      <aside className="min-w-0">
-        <Card className="sticky top-5 shadow-none">
+      <aside className="min-w-0 space-y-4">
+        <Card className="shadow-none">
           <CardHeader className="flex-col">
             <CardTitle>4. Prévia</CardTitle>
             <CardDescription>A etiqueta acompanha os campos enquanto você preenche.</CardDescription>
@@ -188,6 +229,44 @@ export function ProductionLabelForm({ recipes }: ProductionLabelFormProps) {
             {isReady ? "Composição pronta para a próxima etapa." : composition.status === "CONTENT_OVERFLOW" ? "Escolha um formato maior para manter a legibilidade." : "Preencha produto, lote, fabricação, validade e quantidade para concluir a prévia."}
           </p>
         </Card>
+        {isReady && quantity !== null ? (
+          <Card className="shadow-none">
+            <CardHeader className="flex-col">
+              <CardTitle>Pronto para imprimir</CardTitle>
+              <CardDescription>Escolha como deseja organizar o PDF.</CardDescription>
+            </CardHeader>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+              <button
+                type="button"
+                aria-pressed={pdfMode === "INDIVIDUAL"}
+                onClick={() => setPdfMode("INDIVIDUAL")}
+                className={`min-h-20 rounded-[var(--radius-md)] border p-3 text-left ${pdfMode === "INDIVIDUAL" ? "border-[var(--brand-tiffany)] bg-[#eafffe]" : "border-[var(--border)] bg-white"}`}
+              >
+                <span className="block font-semibold">Etiqueta individual</span>
+                <span className="mt-1 block text-xs text-[var(--muted)]">Uma página no tamanho exato da etiqueta.</span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={pdfMode === "A4"}
+                onClick={() => setPdfMode("A4")}
+                className={`min-h-20 rounded-[var(--radius-md)] border p-3 text-left ${pdfMode === "A4" ? "border-[var(--brand-tiffany)] bg-[#eafffe]" : "border-[var(--border)] bg-white"}`}
+              >
+                <span className="block font-semibold">Folha A4</span>
+                <span className="mt-1 block text-xs text-[var(--muted)]">Distribui a quantidade informada para recorte.</span>
+              </button>
+            </div>
+            <div className="mt-4 rounded-[var(--radius-md)] bg-[var(--surface-muted)] p-3 text-sm">
+              <p className="font-semibold">{pdfMode === "INDIVIDUAL" ? "Etiqueta individual" : "Folha A4"}</p>
+              <p className="mt-1">{pdfMode === "INDIVIDUAL" ? `1 etiqueta • ${formatOption.widthMm} × ${formatOption.heightMm} mm • 1 página` : `${productionLabelSummary(quantity, format)} • ${a4Layout?.pageCount ?? 0} ${a4Layout?.pageCount === 1 ? "página" : "páginas"}`}</p>
+              {pdfMode === "INDIVIDUAL" ? <p className="mt-2 text-xs text-[var(--muted)]">O PDF individual contém uma etiqueta. Para várias cópias, use o controle de cópias da impressora.</p> : null}
+            </div>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row xl:flex-col 2xl:flex-row">
+              <ProductionLabelPdfForm recipeId={recipeId} lot={lot} manufacturedAt={manufacturedAt} expiresAt={expiresAt} format={format} quantity={quantity} mode={pdfMode} intent="download" />
+              <ProductionLabelPdfForm recipeId={recipeId} lot={lot} manufacturedAt={manufacturedAt} expiresAt={expiresAt} format={format} quantity={quantity} mode={pdfMode} intent="print" />
+            </div>
+            <p className="mt-4 text-xs leading-5 text-[var(--muted)]">O arquivo já está no tamanho correto. Use Tamanho real ou Escala 100% na impressão. Evite “Ajustar à página”, pois isso pode alterar o tamanho das etiquetas. As opções podem variar conforme o navegador e a impressora.</p>
+          </Card>
+        ) : null}
       </aside>
     </div>
   );
