@@ -1,10 +1,12 @@
 import {
+  FrontOfPackPackagingCondition,
   FrontOfPackRegulatoryCategory,
   type IngredientBaseUnit,
   RecipeCrossContaminationRisk,
   RecipeDisclosureStatus,
   RecipePhysicalState
 } from "@rotula-facil-pro/db";
+import { calculateMainPanelAreaCm2 } from "./main-panel";
 
 export type RecipeYieldInput = {
   finalYieldAmount?: number | string | null;
@@ -28,6 +30,9 @@ export type RecipeIngredientInput = {
 
 export type RecipeInformationInput = {
   regulatoryCategory?: string | null;
+  packagingCondition?: string | null;
+  mainPanelWidthCm?: number | string | null;
+  mainPanelHeightCm?: number | string | null;
   confirmedAllergens?: string[] | string | null;
   additionalAllergens?: string | null;
   glutenStatus?: string | null;
@@ -59,6 +64,8 @@ export type RecipeValidationErrorCode =
   | "recipe-has-no-ingredients"
   | "invalid-information"
   | "invalid-regulatory-category"
+  | "invalid-packaging-condition"
+  | "invalid-main-panel-dimensions"
   | "missing-review-confirmation"
   | "invalid-amount"
   | "unit-mismatch"
@@ -76,6 +83,7 @@ const YIELD_TOLERANCE = 0.01;
 const DISCLOSURE_STATUSES = ["CONTAINS", "DOES_NOT_CONTAIN", "NEEDS_REVIEW"] as const;
 const CROSS_CONTAMINATION_RISKS = ["YES", "NO", "UNKNOWN"] as const;
 const REGULATORY_CATEGORIES = Object.values(FrontOfPackRegulatoryCategory);
+const PACKAGING_CONDITIONS = Object.values(FrontOfPackPackagingCondition);
 
 export function validateRegulatoryCategory(value: string | null | undefined) {
   if (value === undefined) return undefined;
@@ -84,6 +92,15 @@ export function validateRegulatoryCategory(value: string | null | undefined) {
     return value as FrontOfPackRegulatoryCategory;
   }
   throw new RecipeValidationError("invalid-regulatory-category");
+}
+
+export function validatePackagingCondition(value: string | null | undefined) {
+  if (value === undefined) return undefined;
+  if (value === null || value === "") return null;
+  if (PACKAGING_CONDITIONS.includes(value as FrontOfPackPackagingCondition)) {
+    return value as FrontOfPackPackagingCondition;
+  }
+  throw new RecipeValidationError("invalid-packaging-condition");
 }
 
 function parseOptionalPositiveDecimal(
@@ -281,6 +298,25 @@ export function validateRecipeInformationInput(input: RecipeInformationInput) {
     throw new RecipeValidationError("invalid-regulatory-category");
   }
 
+  const packagingCondition = validatePackagingCondition(input.packagingCondition);
+  if (!packagingCondition) {
+    throw new RecipeValidationError("invalid-packaging-condition");
+  }
+
+  let mainPanelWidthCm: number | null = null;
+  let mainPanelHeightCm: number | null = null;
+  if (packagingCondition === "PACKAGED_IN_ABSENCE_OF_CONSUMER") {
+    mainPanelWidthCm = parseOptionalPositiveDecimal(input.mainPanelWidthCm, "invalid-main-panel-dimensions");
+    mainPanelHeightCm = parseOptionalPositiveDecimal(input.mainPanelHeightCm, "invalid-main-panel-dimensions");
+    if (
+      mainPanelWidthCm === null ||
+      mainPanelHeightCm === null ||
+      calculateMainPanelAreaCm2(mainPanelWidthCm, mainPanelHeightCm) === null
+    ) {
+      throw new RecipeValidationError("invalid-main-panel-dimensions");
+    }
+  }
+
   const confirmedAllergens = normalizeTextList([
     ...normalizeFormList(input.confirmedAllergens),
     input.additionalAllergens
@@ -289,6 +325,9 @@ export function validateRecipeInformationInput(input: RecipeInformationInput) {
 
   return {
     regulatoryCategory,
+    packagingCondition,
+    mainPanelWidthCm,
+    mainPanelHeightCm,
     confirmedAllergens,
     glutenStatus: validateDisclosureStatus(input.glutenStatus),
     lactoseStatus: validateDisclosureStatus(input.lactoseStatus),

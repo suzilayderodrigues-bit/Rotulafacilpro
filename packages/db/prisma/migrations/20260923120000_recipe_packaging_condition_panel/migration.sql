@@ -1,0 +1,13 @@
+-- CreateEnum
+CREATE TYPE "FrontOfPackPackagingCondition" AS ENUM (
+  'PACKAGED_IN_ABSENCE_OF_CONSUMER',
+  'NOT_PACKAGED_IN_ABSENCE_OF_CONSUMER',
+  'PACKED_AT_POINT_OF_SALE_AT_CONSUMER_REQUEST',
+  'PREPARED_OR_PORTIONED_AND_SOLD_ON_PREMISES'
+);
+
+-- AlterTable
+ALTER TABLE "recipes"
+  ADD COLUMN "packagingCondition" "FrontOfPackPackagingCondition",
+  ADD COLUMN "mainPanelWidthCm" DECIMAL(10,2),
+  ADD COLUMN "mainPanelHeightCm" DECIMAL(10,2);

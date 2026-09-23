@@ -2,7 +2,10 @@ import type {
   FrontOfPackEvaluation,
   FrontOfPackNutrientEvaluation
 } from "./front-of-pack";
-import type { FrontOfPackRegulatoryCategory } from "@rotula-facil-pro/db";
+import type {
+  FrontOfPackPackagingCondition,
+  FrontOfPackRegulatoryCategory
+} from "@rotula-facil-pro/db";
 import {
   regulatoryServingVersion,
   type RegulatoryServingVersion
@@ -23,11 +26,17 @@ export type FrontOfPackLegalEffect =
   | "OUTSIDE_SCOPE"
   | "UNDETERMINED";
 
-export type FrontOfPackPackagingCondition =
-  | "PACKAGED_IN_ABSENCE_OF_CONSUMER"
-  | "NOT_PACKAGED_IN_ABSENCE_OF_CONSUMER"
-  | "PACKED_AT_POINT_OF_SALE_AT_CONSUMER_REQUEST"
-  | "PREPARED_OR_PORTIONED_AND_SOLD_ON_PREMISES";
+export type { FrontOfPackPackagingCondition } from "@rotula-facil-pro/db";
+
+export const frontOfPackPackagingConditionOptions: ReadonlyArray<{
+  value: FrontOfPackPackagingCondition;
+  label: string;
+}> = [
+  { value: "PACKAGED_IN_ABSENCE_OF_CONSUMER", label: "Já fica embalado antes da venda" },
+  { value: "NOT_PACKAGED_IN_ABSENCE_OF_CONSUMER", label: "Vendo sem embalagem" },
+  { value: "PACKED_AT_POINT_OF_SALE_AT_CONSUMER_REQUEST", label: "Embalo no ponto de venda quando o cliente pede" },
+  { value: "PREPARED_OR_PORTIONED_AND_SOLD_ON_PREMISES", label: "Preparo ou separo as porções e vendo no próprio estabelecimento" }
+];
 
 export type { FrontOfPackRegulatoryCategory } from "@rotula-facil-pro/db";
 

@@ -8,6 +8,7 @@ import { updateRecipeInformationAction } from "@/lib/recipes/actions";
 import { findRecipe } from "@/lib/recipes/repository";
 import { cn } from "@/lib/utils";
 import { frontOfPackRegulatoryCategoryOptions } from "@/lib/regulatory";
+import { RegulatoryPackagingFields } from "./regulatory-packaging-fields";
 
 type RecipeInformationStepPageProps = {
   params: Promise<{ recipeId: string }>;
@@ -20,7 +21,8 @@ const statusMessages: Record<string, string> = {
   revisao: "Confirme que revisou as informações do produto antes de concluir.",
   informacoes: "Revise as opções selecionadas e tente novamente.",
   receita: "Receita não encontrada para esta conta.",
-  formulario: "Revise os dados e tente novamente."
+  formulario: "Revise os dados e tente novamente.",
+  "painel-principal": "Informe largura e altura válidas para a frente principal da embalagem."
 };
 
 const glutenOptions = [
@@ -186,6 +188,12 @@ export default async function RecipeInformationStepPage({ params, searchParams }
                   ))}
                 </Select>
               </Card>
+
+              <RegulatoryPackagingFields
+                defaultCondition={recipe.packagingCondition}
+                defaultWidthCm={recipe.mainPanelWidthCm?.toString() ?? ""}
+                defaultHeightCm={recipe.mainPanelHeightCm?.toString() ?? ""}
+              />
 
               <Card className="shadow-none">
                 <CardHeader className="flex-col">

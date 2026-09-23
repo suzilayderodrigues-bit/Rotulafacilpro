@@ -50,6 +50,8 @@ function informationErrorParam(error: unknown) {
   if (error instanceof RecipeValidationError) {
     if (error.code === "missing-review-confirmation") return "revisao";
     if (error.code === "invalid-regulatory-category") return "informacoes";
+    if (error.code === "invalid-packaging-condition") return "informacoes";
+    if (error.code === "invalid-main-panel-dimensions") return "painel-principal";
     if (error.code === "invalid-information") return "informacoes";
     if (error.code === "recipe-not-found") return "receita";
   }
@@ -244,6 +246,9 @@ export async function updateRecipeInformationAction(formData: FormData) {
   try {
     await updateRecipeInformation(user.id, recipeId, {
       regulatoryCategory: formString(formData, "regulatoryCategory"),
+      packagingCondition: formString(formData, "packagingCondition"),
+      mainPanelWidthCm: formString(formData, "mainPanelWidthCm"),
+      mainPanelHeightCm: formString(formData, "mainPanelHeightCm"),
       confirmedAllergens: selectedAllergens,
       additionalAllergens: formString(formData, "additionalAllergens"),
       glutenStatus: formString(formData, "glutenStatus"),

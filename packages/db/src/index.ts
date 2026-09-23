@@ -43,5 +43,5 @@ export type {
   User
 } from "@prisma/client";
 
-export { FrontOfPackRegulatoryCategory } from "@prisma/client";
+export { FrontOfPackPackagingCondition, FrontOfPackRegulatoryCategory } from "@prisma/client";
 

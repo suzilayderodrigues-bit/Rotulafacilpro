@@ -16,6 +16,7 @@ import {
 } from "@/lib/nutrition";
 import { updateRecipePackagingAction } from "@/lib/recipes/actions";
 import { formatServingsPerPackageLabel } from "@/lib/recipes/domain";
+import { deriveRecipeMainPanelAreaCm2 } from "@/lib/recipes/main-panel";
 import {
   buildNutritionTableViewModel,
   calculateNutritionPerServing,
@@ -325,7 +326,9 @@ export default async function RecipeSummaryPage({ params, searchParams }: Recipe
     frontOfPackDecision = composeFrontOfPackDecision(
       evaluateFrontOfPackApplicability({
         foodCategory: recipe.foodCategory,
-        regulatoryCategory: recipe.regulatoryCategory
+        regulatoryCategory: recipe.regulatoryCategory,
+        packagingCondition: recipe.packagingCondition,
+        mainPanelAreaCm2: deriveRecipeMainPanelAreaCm2(recipe)
       }),
       evaluateFrontOfPack(nutritionResult)
     );

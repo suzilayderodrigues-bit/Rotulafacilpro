@@ -2,6 +2,7 @@ import { findBarcodeByRecipe } from "@/lib/barcodes/repository";
 import { renderBarcodeSvg, type BarcodeRenderResult } from "@/lib/barcodes/render";
 import { calculateRecipeNutrition, NutritionCalculationError } from "@/lib/nutrition";
 import { findRecipeForNutrition } from "@/lib/recipes/repository";
+import { deriveRecipeMainPanelAreaCm2 } from "@/lib/recipes/main-panel";
 import {
   buildNutritionTableViewModel,
   calculateNutritionPerServing,
@@ -81,7 +82,9 @@ export function composeFinalLabelPreview(recipe: Recipe, barcode: Barcode | null
     frontOfPack = composeFrontOfPackDecision(
       evaluateFrontOfPackApplicability(applicabilityInput ?? {
         foodCategory: recipe.foodCategory,
-        regulatoryCategory: recipe.regulatoryCategory
+        regulatoryCategory: recipe.regulatoryCategory,
+        packagingCondition: recipe.packagingCondition,
+        mainPanelAreaCm2: deriveRecipeMainPanelAreaCm2(recipe)
       }),
       evaluateFrontOfPack(raw)
     );
