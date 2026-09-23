@@ -8,7 +8,7 @@ type FrontOfPackNutritionPreviewProps = {
 export function FrontOfPackNutritionPreview({
   decision
 }: FrontOfPackNutritionPreviewProps) {
-  const { applicability, thresholdEvaluation } = decision;
+  const { applicability } = decision;
 
   return (
     <div className="space-y-4">
@@ -42,9 +42,7 @@ export function FrontOfPackNutritionPreview({
         </div>
       ) : null}
 
-      {applicability.status === "APPLICABLE" &&
-      !thresholdEvaluation.hasAnyHighIn &&
-      !thresholdEvaluation.hasUnknownData ? (
+      {decision.status === "NO_WARNING" && !decision.hasUnknownData ? (
         <p className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm leading-6 text-[var(--foreground)]">
           Este produto não atinge os limites para rotulagem nutricional frontal.
         </p>
@@ -66,7 +64,7 @@ export function FrontOfPackNutritionPreview({
         </div>
       ) : null}
 
-      {thresholdEvaluation.hasUnknownData ? (
+      {decision.hasUnknownData ? (
         <p className="rounded-[var(--radius-md)] border border-[#f4d5b6] bg-[#fff8f0] px-4 py-3 text-sm leading-6 text-[#8a4b15]">
           Alguns dados necessários para avaliar a rotulagem frontal não estão disponíveis.
         </p>

@@ -84,7 +84,10 @@ export function composeFinalLabelPreview(recipe: Recipe, barcode: Barcode | null
         foodCategory: recipe.foodCategory,
         regulatoryCategory: recipe.regulatoryCategory,
         packagingCondition: recipe.packagingCondition,
-        mainPanelAreaCm2: deriveRecipeMainPanelAreaCm2(recipe)
+        mainPanelAreaCm2: deriveRecipeMainPanelAreaCm2(recipe),
+        addedSugarsAddition: recipe.addedSugarsAddition,
+        saturatedFatAddition: recipe.saturatedFatAddition,
+        sodiumAddition: recipe.sodiumAddition
       }),
       evaluateFrontOfPack(raw)
     );

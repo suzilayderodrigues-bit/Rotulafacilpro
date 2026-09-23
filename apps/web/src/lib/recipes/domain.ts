@@ -1,6 +1,7 @@
 import {
   FrontOfPackPackagingCondition,
   FrontOfPackRegulatoryCategory,
+  type FrontOfPackNutrientAdditionStatus,
   type IngredientBaseUnit,
   RecipeCrossContaminationRisk,
   RecipeDisclosureStatus,
@@ -33,6 +34,9 @@ export type RecipeInformationInput = {
   packagingCondition?: string | null;
   mainPanelWidthCm?: number | string | null;
   mainPanelHeightCm?: number | string | null;
+  addedSugarsAddition?: string | null;
+  saturatedFatAddition?: string | null;
+  sodiumAddition?: string | null;
   confirmedAllergens?: string[] | string | null;
   additionalAllergens?: string | null;
   glutenStatus?: string | null;
@@ -66,6 +70,7 @@ export type RecipeValidationErrorCode =
   | "invalid-regulatory-category"
   | "invalid-packaging-condition"
   | "invalid-main-panel-dimensions"
+  | "invalid-nutrient-addition-status"
   | "missing-review-confirmation"
   | "invalid-amount"
   | "unit-mismatch"
@@ -84,6 +89,15 @@ const DISCLOSURE_STATUSES = ["CONTAINS", "DOES_NOT_CONTAIN", "NEEDS_REVIEW"] as 
 const CROSS_CONTAMINATION_RISKS = ["YES", "NO", "UNKNOWN"] as const;
 const REGULATORY_CATEGORIES = Object.values(FrontOfPackRegulatoryCategory);
 const PACKAGING_CONDITIONS = Object.values(FrontOfPackPackagingCondition);
+const NUTRIENT_ADDITION_STATUSES: readonly FrontOfPackNutrientAdditionStatus[] = ["YES", "NO", "UNKNOWN"];
+const CONDITIONAL_REGULATORY_CATEGORIES: readonly FrontOfPackRegulatoryCategory[] = [
+  "PLAIN_PLANT_FOOD",
+  "FLOUR",
+  "MEAT_OR_FISH",
+  "EGG",
+  "FERMENTED_MILK",
+  "CHEESE"
+];
 
 export function validateRegulatoryCategory(value: string | null | undefined) {
   if (value === undefined) return undefined;
@@ -101,6 +115,15 @@ export function validatePackagingCondition(value: string | null | undefined) {
     return value as FrontOfPackPackagingCondition;
   }
   throw new RecipeValidationError("invalid-packaging-condition");
+}
+
+export function validateNutrientAdditionStatus(value: string | null | undefined) {
+  if (value === undefined) return undefined;
+  if (value === null || value === "") return null;
+  if (NUTRIENT_ADDITION_STATUSES.includes(value as FrontOfPackNutrientAdditionStatus)) {
+    return value as FrontOfPackNutrientAdditionStatus;
+  }
+  throw new RecipeValidationError("invalid-nutrient-addition-status");
 }
 
 function parseOptionalPositiveDecimal(
@@ -303,6 +326,18 @@ export function validateRecipeInformationInput(input: RecipeInformationInput) {
     throw new RecipeValidationError("invalid-packaging-condition");
   }
 
+  const conditionalCategory = CONDITIONAL_REGULATORY_CATEGORIES.includes(regulatoryCategory);
+  const addedSugarsAddition = validateNutrientAdditionStatus(input.addedSugarsAddition);
+  const saturatedFatAddition = validateNutrientAdditionStatus(input.saturatedFatAddition);
+  const sodiumAddition = validateNutrientAdditionStatus(input.sodiumAddition);
+
+  if (
+    conditionalCategory &&
+    (!addedSugarsAddition || !saturatedFatAddition || !sodiumAddition)
+  ) {
+    throw new RecipeValidationError("invalid-nutrient-addition-status");
+  }
+
   let mainPanelWidthCm: number | null = null;
   let mainPanelHeightCm: number | null = null;
   if (packagingCondition === "PACKAGED_IN_ABSENCE_OF_CONSUMER") {
@@ -328,6 +363,9 @@ export function validateRecipeInformationInput(input: RecipeInformationInput) {
     packagingCondition,
     mainPanelWidthCm,
     mainPanelHeightCm,
+    addedSugarsAddition: conditionalCategory ? addedSugarsAddition : null,
+    saturatedFatAddition: conditionalCategory ? saturatedFatAddition : null,
+    sodiumAddition: conditionalCategory ? sodiumAddition : null,
     confirmedAllergens,
     glutenStatus: validateDisclosureStatus(input.glutenStatus),
     lactoseStatus: validateDisclosureStatus(input.lactoseStatus),

@@ -52,6 +52,7 @@ function informationErrorParam(error: unknown) {
     if (error.code === "invalid-regulatory-category") return "informacoes";
     if (error.code === "invalid-packaging-condition") return "informacoes";
     if (error.code === "invalid-main-panel-dimensions") return "painel-principal";
+    if (error.code === "invalid-nutrient-addition-status") return "adicoes-nutrientes";
     if (error.code === "invalid-information") return "informacoes";
     if (error.code === "recipe-not-found") return "receita";
   }
@@ -249,6 +250,9 @@ export async function updateRecipeInformationAction(formData: FormData) {
       packagingCondition: formString(formData, "packagingCondition"),
       mainPanelWidthCm: formString(formData, "mainPanelWidthCm"),
       mainPanelHeightCm: formString(formData, "mainPanelHeightCm"),
+      addedSugarsAddition: formString(formData, "addedSugarsAddition"),
+      saturatedFatAddition: formString(formData, "saturatedFatAddition"),
+      sodiumAddition: formString(formData, "sodiumAddition"),
       confirmedAllergens: selectedAllergens,
       additionalAllergens: formString(formData, "additionalAllergens"),
       glutenStatus: formString(formData, "glutenStatus"),

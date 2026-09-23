@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { ArrowLeft, Check, Circle, ClipboardList } from "lucide-react";
-import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, EmptyState, Input, Label, Select, Toast } from "@/components/design-system";
+import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, EmptyState, Input, Label, Toast } from "@/components/design-system";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { requireUser } from "@/lib/auth/session";
 import { updateRecipeInformationAction } from "@/lib/recipes/actions";
 import { findRecipe } from "@/lib/recipes/repository";
 import { cn } from "@/lib/utils";
-import { frontOfPackRegulatoryCategoryOptions } from "@/lib/regulatory";
+import { RegulatoryCategoryFields } from "./regulatory-category-fields";
 import { RegulatoryPackagingFields } from "./regulatory-packaging-fields";
 
 type RecipeInformationStepPageProps = {
@@ -15,14 +15,15 @@ type RecipeInformationStepPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-const steps = ["Produto", "Ingredientes", "Rendimento", "Informações"];
+const steps = ["Produto", "Ingredientes", "Rendimento", "Finalizar"];
 
 const statusMessages: Record<string, string> = {
   revisao: "Confirme que revisou as informações do produto antes de concluir.",
   informacoes: "Revise as opções selecionadas e tente novamente.",
   receita: "Receita não encontrada para esta conta.",
   formulario: "Revise os dados e tente novamente.",
-  "painel-principal": "Informe largura e altura válidas para a frente principal da embalagem."
+  "painel-principal": "Informe largura e altura válidas para a frente principal da embalagem.",
+  "adicoes-nutrientes": "Responda às três perguntas sobre os ingredientes adicionados."
 };
 
 const glutenOptions = [
@@ -157,9 +158,9 @@ export default async function RecipeInformationStepPage({ params, searchParams }
             <section className="mb-6 rounded-[var(--radius-lg)] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-soft)] sm:p-6">
               <Badge variant="secondary" className="gap-1.5">
                 <span className="size-1.5 rounded-full bg-[var(--accent-orange)]" />
-                Informações
+                Finalizar
               </Badge>
-              <h1 className="mt-4 text-2xl font-semibold tracking-normal text-[var(--foreground)] sm:text-3xl">Informações do produto</h1>
+              <h1 className="mt-4 text-2xl font-semibold tracking-normal text-[var(--foreground)] sm:text-3xl">Finalizar</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)] sm:text-base">
                 Revise as informações importantes do seu produto antes de continuar.
               </p>
@@ -173,21 +174,12 @@ export default async function RecipeInformationStepPage({ params, searchParams }
             <form action={updateRecipeInformationAction} className="space-y-5">
               <input type="hidden" name="recipeId" value={recipe.id} />
 
-              <Card className="shadow-none">
-                <CardHeader className="flex-col">
-                  <div>
-                    <CardTitle>Tipo do produto</CardTitle>
-                    <CardDescription>Essa informação ajuda o Rotula a aplicar corretamente as regras de rotulagem.</CardDescription>
-                  </div>
-                </CardHeader>
-                <Label htmlFor="regulatoryCategory">Selecione a opção que melhor descreve o produto</Label>
-                <Select id="regulatoryCategory" name="regulatoryCategory" defaultValue={recipe.regulatoryCategory ?? ""} required>
-                  <option value="" disabled>Selecione o tipo do produto</option>
-                  {frontOfPackRegulatoryCategoryOptions.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </Select>
-              </Card>
+              <RegulatoryCategoryFields
+                defaultCategory={recipe.regulatoryCategory}
+                defaultAddedSugarsAddition={recipe.addedSugarsAddition}
+                defaultSaturatedFatAddition={recipe.saturatedFatAddition}
+                defaultSodiumAddition={recipe.sodiumAddition}
+              />
 
               <RegulatoryPackagingFields
                 defaultCondition={recipe.packagingCondition}

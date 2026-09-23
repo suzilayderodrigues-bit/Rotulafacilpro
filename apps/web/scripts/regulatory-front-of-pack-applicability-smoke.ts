@@ -69,13 +69,17 @@ async function main() {
 
   const conditionalWithoutAddition = evaluateFrontOfPackApplicability({
     regulatoryCategory: "CHEESE",
-    relevantNutrientAddition: false
+    addedSugarsAddition: "NO",
+    saturatedFatAddition: "NO",
+    sodiumAddition: "NO"
   });
   assert(conditionalWithoutAddition.status === "NOT_APPLICABLE", "Queijo sem adição relevante deve permanecer vedado.");
 
   const conditionalWithAddition = evaluateFrontOfPackApplicability({
     regulatoryCategory: "CHEESE",
-    relevantNutrientAddition: true
+    addedSugarsAddition: "UNKNOWN",
+    saturatedFatAddition: "NO",
+    sodiumAddition: "NO"
   });
   assert(conditionalWithAddition.status === "REQUIRES_REVIEW", "Adição relevante exige revisão por nutriente.");
 

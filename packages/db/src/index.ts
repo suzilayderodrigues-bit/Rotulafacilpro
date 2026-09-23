@@ -45,3 +45,5 @@ export type {
 
 export { FrontOfPackPackagingCondition, FrontOfPackRegulatoryCategory } from "@prisma/client";
 
+export type FrontOfPackNutrientAdditionStatus = "YES" | "NO" | "UNKNOWN";
+

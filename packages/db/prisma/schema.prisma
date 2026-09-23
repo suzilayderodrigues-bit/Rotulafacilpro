@@ -112,6 +112,12 @@ enum FrontOfPackPackagingCondition {
   PREPARED_OR_PORTIONED_AND_SOLD_ON_PREMISES
 }
 
+enum FrontOfPackNutrientAdditionStatus {
+  YES
+  NO
+  UNKNOWN
+}
+
 enum BarcodeType {
   OFFICIAL_GTIN
   INTERNAL
@@ -189,6 +195,9 @@ model Recipe {
   packagingCondition          FrontOfPackPackagingCondition?
   mainPanelWidthCm            Decimal?                      @db.Decimal(10, 2)
   mainPanelHeightCm           Decimal?                      @db.Decimal(10, 2)
+  addedSugarsAddition         FrontOfPackNutrientAdditionStatus?
+  saturatedFatAddition        FrontOfPackNutrientAdditionStatus?
+  sodiumAddition              FrontOfPackNutrientAdditionStatus?
   physicalState               RecipePhysicalState
   finalYieldAmount            Decimal?                      @db.Decimal(10, 2)
   finalYieldUnit              IngredientBaseUnit

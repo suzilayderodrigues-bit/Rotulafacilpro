@@ -1,8 +1,11 @@
 import type {
   FrontOfPackEvaluation,
+  FrontOfPackNutrient,
   FrontOfPackNutrientEvaluation
 } from "./front-of-pack";
+import { frontOfPackNutrients } from "./front-of-pack";
 import type {
+  FrontOfPackNutrientAdditionStatus,
   FrontOfPackPackagingCondition,
   FrontOfPackRegulatoryCategory
 } from "@rotula-facil-pro/db";
@@ -66,6 +69,23 @@ export const frontOfPackRegulatoryCategoryOptions: ReadonlyArray<{
   { value: "DIETARY_FORMULA_FOR_INBORN_ERRORS", label: "Fórmula dietoterápica para erros inatos do metabolismo" }
 ];
 
+export const primaryFrontOfPackRegulatoryCategoryOptions = [
+  { value: "CHEESE", label: "Queijo" },
+  { value: "FLOUR", label: "Farinha" },
+  { value: "EGG", label: "Ovo" },
+  { value: "MEAT_OR_FISH", label: "Carne ou pescado" },
+  { value: "FERMENTED_MILK", label: "Leite fermentado" },
+  { value: "PLAIN_PLANT_FOOD", label: "Alimento vegetal sem adição de ingredientes" },
+  { value: "OUTSIDE_ANNEX_XVI", label: "Nenhuma dessas opções" }
+] as const satisfies ReadonlyArray<{ value: FrontOfPackRegulatoryCategory; label: string }>;
+
+const primaryCategoryValues = new Set<FrontOfPackRegulatoryCategory>(
+  primaryFrontOfPackRegulatoryCategoryOptions.map(({ value }) => value)
+);
+
+export const specialFrontOfPackRegulatoryCategoryOptions =
+  frontOfPackRegulatoryCategoryOptions.filter(({ value }) => !primaryCategoryValues.has(value));
+
 export type FrontOfPackApplicabilityReasonCode =
   | "GENERAL_MANDATORY_RULE"
   | "OUTSIDE_PREPACKAGED_SCOPE"
@@ -73,6 +93,7 @@ export type FrontOfPackApplicabilityReasonCode =
   | "OPTIONAL_POINT_OF_SALE_REQUEST"
   | "OPTIONAL_PREPARED_OR_PORTIONED_ON_PREMISES"
   | "ANNEX_XVI_PROHIBITED"
+  | "ANNEX_XVI_CONDITIONAL_NO_ADDITION"
   | "ANNEX_XVI_CONDITIONAL_REVIEW"
   | "MISSING_REGULATORY_CATEGORY"
   | "UX_CATEGORY_REQUIRES_CLASSIFICATION"
@@ -84,7 +105,9 @@ export type FrontOfPackApplicabilityInput = {
   regulatoryCategory?: FrontOfPackRegulatoryCategory | null;
   packagingCondition?: FrontOfPackPackagingCondition | null;
   mainPanelAreaCm2?: number | null;
-  relevantNutrientAddition?: boolean | null;
+  addedSugarsAddition?: FrontOfPackNutrientAdditionStatus | null;
+  saturatedFatAddition?: FrontOfPackNutrientAdditionStatus | null;
+  sodiumAddition?: FrontOfPackNutrientAdditionStatus | null;
 };
 
 export type FrontOfPackApplicability = {
@@ -95,6 +118,7 @@ export type FrontOfPackApplicability = {
   reason: string;
   sourceReference: string;
   requiredData: string[];
+  evaluatedNutrients: readonly FrontOfPackNutrient[];
 };
 
 export type FinalFrontOfPackDecisionStatus =
@@ -145,7 +169,8 @@ function result(
   legalEffect: FrontOfPackLegalEffect,
   reasonCode: FrontOfPackApplicabilityReasonCode,
   reason: string,
-  requiredData: string[] = []
+  requiredData: string[] = [],
+  evaluatedNutrients: readonly FrontOfPackNutrient[] = []
 ): FrontOfPackApplicability {
   return {
     regulatoryVersion: regulatoryServingVersion,
@@ -154,7 +179,8 @@ function result(
     reasonCode,
     reason,
     sourceReference: frontOfPackApplicabilitySourceReference,
-    requiredData
+    requiredData,
+    evaluatedNutrients
   };
 }
 
@@ -189,6 +215,7 @@ export function evaluateFrontOfPackApplicability(
   }
 
   const category = input.regulatoryCategory;
+  let evaluatedNutrients: readonly FrontOfPackNutrient[] = frontOfPackNutrients;
 
   if (category && unconditionalAnnexXviCategories.includes(category)) {
     return result(
@@ -200,22 +227,39 @@ export function evaluateFrontOfPackApplicability(
   }
 
   if (category && conditionalAnnexXviCategories.includes(category)) {
-    if (input.relevantNutrientAddition === false) {
+    const additions: ReadonlyArray<{
+      nutrient: FrontOfPackNutrient;
+      status: FrontOfPackNutrientAdditionStatus | null | undefined;
+      label: string;
+    }> = [
+      { nutrient: "addedSugars", status: input.addedSugarsAddition, label: "açúcares adicionados" },
+      { nutrient: "saturatedFat", status: input.saturatedFatAddition, label: "gordura saturada" },
+      { nutrient: "sodium", status: input.sodiumAddition, label: "sódio" }
+    ];
+    const unresolved = additions.filter(({ status }) => status === null || status === undefined || status === "UNKNOWN");
+
+    if (unresolved.length > 0) {
       return result(
-        "NOT_APPLICABLE",
-        "PROHIBITED",
-        "ANNEX_XVI_PROHIBITED",
-        "A declaração da rotulagem nutricional frontal é vedada para esta categoria nesta condição."
+        "REQUIRES_REVIEW",
+        "UNDETERMINED",
+        "ANNEX_XVI_CONDITIONAL_REVIEW",
+        "Precisamos confirmar quais nutrientes foram alterados por ingredientes adicionados antes de definir a rotulagem frontal.",
+        unresolved.map(({ label }) => `adição relacionada a ${label}`)
       );
     }
 
-    return result(
-      "REQUIRES_REVIEW",
-      "UNDETERMINED",
-      "ANNEX_XVI_CONDITIONAL_REVIEW",
-      "Precisamos confirmar quais nutrientes foram alterados por ingredientes adicionados antes de definir a rotulagem frontal.",
-      ["alteração de açúcares adicionados, gordura saturada e sódio por ingredientes adicionados"]
-    );
+    evaluatedNutrients = additions
+      .filter(({ status }) => status === "YES")
+      .map(({ nutrient }) => nutrient);
+
+    if (evaluatedNutrients.length === 0) {
+      return result(
+        "NOT_APPLICABLE",
+        "PROHIBITED",
+        "ANNEX_XVI_CONDITIONAL_NO_ADDITION",
+        "A declaração da rotulagem nutricional frontal é vedada para esta categoria nesta condição."
+      );
+    }
   }
 
   if (!category) {
@@ -276,7 +320,9 @@ export function evaluateFrontOfPackApplicability(
     "APPLICABLE",
     "MANDATORY",
     "GENERAL_MANDATORY_RULE",
-    "Este produto está sujeito à avaliação de rotulagem nutricional frontal."
+    "Este produto está sujeito à avaliação de rotulagem nutricional frontal.",
+    [],
+    evaluatedNutrients
   );
 }
 
@@ -284,9 +330,16 @@ export function composeFrontOfPackDecision(
   applicability: FrontOfPackApplicability,
   thresholdEvaluation: FrontOfPackEvaluation
 ): FinalFrontOfPackDecision {
+  const evaluated = applicability.evaluatedNutrients.map(
+    (nutrient) => thresholdEvaluation.nutrients[nutrient]
+  );
+  const eligibleHighIn = evaluated.filter(({ status }) => status === "HIGH");
+  const hasUnknownData = applicability.status === "APPLICABLE"
+    ? evaluated.some(({ status }) => status === "UNKNOWN")
+    : thresholdEvaluation.hasUnknownData;
   const shouldDisplayOfficialWarning =
-    applicability.status === "APPLICABLE" && thresholdEvaluation.hasAnyHighIn;
-  const finalHighIn = shouldDisplayOfficialWarning ? [...thresholdEvaluation.highIn] : [];
+    applicability.status === "APPLICABLE" && eligibleHighIn.length > 0;
+  const finalHighIn = shouldDisplayOfficialWarning ? eligibleHighIn : [];
   let status: FinalFrontOfPackDecisionStatus;
 
   if (applicability.status === "NOT_APPLICABLE") {
@@ -295,7 +348,7 @@ export function composeFrontOfPackDecision(
     status = "REQUIRES_REVIEW";
   } else if (shouldDisplayOfficialWarning) {
     status = "SHOW_WARNING";
-  } else if (thresholdEvaluation.hasUnknownData) {
+  } else if (hasUnknownData) {
     status = "INCOMPLETE_NUTRITION_DATA";
   } else {
     status = "NO_WARNING";
@@ -309,6 +362,6 @@ export function composeFrontOfPackDecision(
     technicalHighIn: [...thresholdEvaluation.highIn],
     finalHighIn,
     shouldDisplayOfficialWarning,
-    hasUnknownData: thresholdEvaluation.hasUnknownData
+    hasUnknownData
   };
 }
