@@ -1,5 +1,6 @@
-import type {
-  IngredientBaseUnit,
+import {
+  FrontOfPackRegulatoryCategory,
+  type IngredientBaseUnit,
   RecipeCrossContaminationRisk,
   RecipeDisclosureStatus,
   RecipePhysicalState
@@ -14,6 +15,7 @@ export type RecipeYieldInput = {
 export type RecipeInput = RecipeYieldInput & {
   name: string;
   foodCategory?: string | null;
+  regulatoryCategory?: string | null;
   physicalState: RecipePhysicalState;
   finalYieldUnit: IngredientBaseUnit;
 };
@@ -25,6 +27,7 @@ export type RecipeIngredientInput = {
 };
 
 export type RecipeInformationInput = {
+  regulatoryCategory?: string | null;
   confirmedAllergens?: string[] | string | null;
   additionalAllergens?: string | null;
   glutenStatus?: string | null;
@@ -55,6 +58,7 @@ export type RecipeValidationErrorCode =
   | "inconsistent-yield"
   | "recipe-has-no-ingredients"
   | "invalid-information"
+  | "invalid-regulatory-category"
   | "missing-review-confirmation"
   | "invalid-amount"
   | "unit-mismatch"
@@ -71,6 +75,16 @@ export class RecipeValidationError extends Error {
 const YIELD_TOLERANCE = 0.01;
 const DISCLOSURE_STATUSES = ["CONTAINS", "DOES_NOT_CONTAIN", "NEEDS_REVIEW"] as const;
 const CROSS_CONTAMINATION_RISKS = ["YES", "NO", "UNKNOWN"] as const;
+const REGULATORY_CATEGORIES = Object.values(FrontOfPackRegulatoryCategory);
+
+export function validateRegulatoryCategory(value: string | null | undefined) {
+  if (value === undefined) return undefined;
+  if (value === null || value === "") return null;
+  if (REGULATORY_CATEGORIES.includes(value as FrontOfPackRegulatoryCategory)) {
+    return value as FrontOfPackRegulatoryCategory;
+  }
+  throw new RecipeValidationError("invalid-regulatory-category");
+}
 
 function parseOptionalPositiveDecimal(
   value: number | string | null | undefined,
@@ -250,6 +264,7 @@ export function validateRecipeInput(input: RecipeInput) {
   return {
     name,
     foodCategory: input.foodCategory?.trim() || null,
+    regulatoryCategory: validateRegulatoryCategory(input.regulatoryCategory) ?? null,
     physicalState,
     ...resolvedYield,
     finalYieldUnit: validateYieldUnit(physicalState, input.finalYieldUnit)
@@ -261,6 +276,11 @@ export function validateRecipeInformationInput(input: RecipeInformationInput) {
     throw new RecipeValidationError("missing-review-confirmation");
   }
 
+  const regulatoryCategory = validateRegulatoryCategory(input.regulatoryCategory);
+  if (!regulatoryCategory) {
+    throw new RecipeValidationError("invalid-regulatory-category");
+  }
+
   const confirmedAllergens = normalizeTextList([
     ...normalizeFormList(input.confirmedAllergens),
     input.additionalAllergens
@@ -268,6 +288,7 @@ export function validateRecipeInformationInput(input: RecipeInformationInput) {
   const crossContaminationRisk = validateCrossContaminationRisk(input.crossContaminationRisk);
 
   return {
+    regulatoryCategory,
     confirmedAllergens,
     glutenStatus: validateDisclosureStatus(input.glutenStatus),
     lactoseStatus: validateDisclosureStatus(input.lactoseStatus),

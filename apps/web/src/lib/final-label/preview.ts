@@ -79,7 +79,10 @@ export function composeFinalLabelPreview(recipe: Recipe, barcode: Barcode | null
   try {
     const raw = calculateRecipeNutrition(recipe);
     frontOfPack = composeFrontOfPackDecision(
-      evaluateFrontOfPackApplicability(applicabilityInput ?? { foodCategory: recipe.foodCategory }),
+      evaluateFrontOfPackApplicability(applicabilityInput ?? {
+        foodCategory: recipe.foodCategory,
+        regulatoryCategory: recipe.regulatoryCategory
+      }),
       evaluateFrontOfPack(raw)
     );
     const perServing = calculateNutritionPerServing(raw, recipe.servingSize, expectedUnit);

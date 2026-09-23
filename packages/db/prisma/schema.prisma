@@ -82,6 +82,29 @@ enum RecipeCrossContaminationRisk {
   UNKNOWN
 }
 
+enum FrontOfPackRegulatoryCategory {
+  OUTSIDE_ANNEX_XVI
+  PLAIN_PLANT_FOOD
+  FLOUR
+  MEAT_OR_FISH
+  EGG
+  FERMENTED_MILK
+  CHEESE
+  MAMMAL_MILK
+  MILK_POWDER
+  OLIVE_OR_OTHER_VEGETABLE_OIL
+  SALT
+  INFANT_FORMULA
+  ENTERAL_FORMULA
+  WEIGHT_CONTROL_FOOD
+  DIETARY_SUPPLEMENT
+  ALCOHOLIC_BEVERAGE
+  INDUSTRIAL_PROCESSING_ONLY
+  FOOD_SERVICE_ONLY
+  FOOD_ADDITIVE_OR_PROCESSING_AID
+  DIETARY_FORMULA_FOR_INBORN_ERRORS
+}
+
 enum BarcodeType {
   OFFICIAL_GTIN
   INTERNAL
@@ -155,6 +178,7 @@ model Recipe {
   userId                      String
   name                        String
   foodCategory                String?
+  regulatoryCategory          FrontOfPackRegulatoryCategory?
   physicalState               RecipePhysicalState
   finalYieldAmount            Decimal?                      @db.Decimal(10, 2)
   finalYieldUnit              IngredientBaseUnit

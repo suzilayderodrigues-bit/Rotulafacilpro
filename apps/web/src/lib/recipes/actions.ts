@@ -49,6 +49,7 @@ function ingredientErrorParam(error: unknown) {
 function informationErrorParam(error: unknown) {
   if (error instanceof RecipeValidationError) {
     if (error.code === "missing-review-confirmation") return "revisao";
+    if (error.code === "invalid-regulatory-category") return "informacoes";
     if (error.code === "invalid-information") return "informacoes";
     if (error.code === "recipe-not-found") return "receita";
   }
@@ -242,6 +243,7 @@ export async function updateRecipeInformationAction(formData: FormData) {
 
   try {
     await updateRecipeInformation(user.id, recipeId, {
+      regulatoryCategory: formString(formData, "regulatoryCategory"),
       confirmedAllergens: selectedAllergens,
       additionalAllergens: formString(formData, "additionalAllergens"),
       glutenStatus: formString(formData, "glutenStatus"),

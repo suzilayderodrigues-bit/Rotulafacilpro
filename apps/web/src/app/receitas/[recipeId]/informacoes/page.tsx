@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { ArrowLeft, Check, Circle, ClipboardList } from "lucide-react";
-import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, EmptyState, Input, Label, Toast } from "@/components/design-system";
+import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, EmptyState, Input, Label, Select, Toast } from "@/components/design-system";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { requireUser } from "@/lib/auth/session";
 import { updateRecipeInformationAction } from "@/lib/recipes/actions";
 import { findRecipe } from "@/lib/recipes/repository";
 import { cn } from "@/lib/utils";
+import { frontOfPackRegulatoryCategoryOptions } from "@/lib/regulatory";
 
 type RecipeInformationStepPageProps = {
   params: Promise<{ recipeId: string }>;
@@ -169,6 +170,22 @@ export default async function RecipeInformationStepPage({ params, searchParams }
 
             <form action={updateRecipeInformationAction} className="space-y-5">
               <input type="hidden" name="recipeId" value={recipe.id} />
+
+              <Card className="shadow-none">
+                <CardHeader className="flex-col">
+                  <div>
+                    <CardTitle>Tipo do produto</CardTitle>
+                    <CardDescription>Essa informação ajuda o Rotula a aplicar corretamente as regras de rotulagem.</CardDescription>
+                  </div>
+                </CardHeader>
+                <Label htmlFor="regulatoryCategory">Selecione a opção que melhor descreve o produto</Label>
+                <Select id="regulatoryCategory" name="regulatoryCategory" defaultValue={recipe.regulatoryCategory ?? ""} required>
+                  <option value="" disabled>Selecione o tipo do produto</option>
+                  {frontOfPackRegulatoryCategoryOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </Select>
+              </Card>
 
               <Card className="shadow-none">
                 <CardHeader className="flex-col">

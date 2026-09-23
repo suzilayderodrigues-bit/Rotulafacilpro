@@ -89,6 +89,7 @@ export async function updateRecipe(userId: string, recipeId: string, input: Upda
   const data = validateRecipeInput({
     name: input.name ?? current.name,
     foodCategory: input.foodCategory === undefined ? current.foodCategory : input.foodCategory,
+    regulatoryCategory: input.regulatoryCategory === undefined ? current.regulatoryCategory : input.regulatoryCategory,
     physicalState: input.physicalState ?? current.physicalState,
     finalYieldAmount:
       input.finalYieldAmount === undefined ? current.finalYieldAmount?.toString() : input.finalYieldAmount,

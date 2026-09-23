@@ -2,6 +2,7 @@ import type {
   FrontOfPackEvaluation,
   FrontOfPackNutrientEvaluation
 } from "./front-of-pack";
+import type { FrontOfPackRegulatoryCategory } from "@rotula-facil-pro/db";
 import {
   regulatoryServingVersion,
   type RegulatoryServingVersion
@@ -28,27 +29,33 @@ export type FrontOfPackPackagingCondition =
   | "PACKED_AT_POINT_OF_SALE_AT_CONSUMER_REQUEST"
   | "PREPARED_OR_PORTIONED_AND_SOLD_ON_PREMISES";
 
-export type FrontOfPackRegulatoryCategory =
-  | "OUTSIDE_ANNEX_XVI"
-  | "PLAIN_PLANT_FOOD"
-  | "FLOUR"
-  | "MEAT_OR_FISH"
-  | "EGG"
-  | "FERMENTED_MILK"
-  | "CHEESE"
-  | "MAMMAL_MILK"
-  | "MILK_POWDER"
-  | "OLIVE_OR_OTHER_VEGETABLE_OIL"
-  | "SALT"
-  | "INFANT_FORMULA"
-  | "ENTERAL_FORMULA"
-  | "WEIGHT_CONTROL_FOOD"
-  | "DIETARY_SUPPLEMENT"
-  | "ALCOHOLIC_BEVERAGE"
-  | "INDUSTRIAL_PROCESSING_ONLY"
-  | "FOOD_SERVICE_ONLY"
-  | "FOOD_ADDITIVE_OR_PROCESSING_AID"
-  | "DIETARY_FORMULA_FOR_INBORN_ERRORS";
+export type { FrontOfPackRegulatoryCategory } from "@rotula-facil-pro/db";
+
+export const frontOfPackRegulatoryCategoryOptions: ReadonlyArray<{
+  value: FrontOfPackRegulatoryCategory;
+  label: string;
+}> = [
+  { value: "OUTSIDE_ANNEX_XVI", label: "Outro alimento / nenhuma das opções abaixo" },
+  { value: "PLAIN_PLANT_FOOD", label: "Alimento vegetal sem adição de ingredientes" },
+  { value: "FLOUR", label: "Farinha" },
+  { value: "MEAT_OR_FISH", label: "Carne ou pescado" },
+  { value: "EGG", label: "Ovo" },
+  { value: "FERMENTED_MILK", label: "Leite fermentado" },
+  { value: "CHEESE", label: "Queijo" },
+  { value: "MAMMAL_MILK", label: "Leite de mamíferos" },
+  { value: "MILK_POWDER", label: "Leite em pó" },
+  { value: "OLIVE_OR_OTHER_VEGETABLE_OIL", label: "Azeite ou outro óleo vegetal" },
+  { value: "SALT", label: "Sal" },
+  { value: "INFANT_FORMULA", label: "Fórmula infantil" },
+  { value: "ENTERAL_FORMULA", label: "Fórmula para nutrição enteral" },
+  { value: "WEIGHT_CONTROL_FOOD", label: "Alimento para controle de peso" },
+  { value: "DIETARY_SUPPLEMENT", label: "Suplemento alimentar" },
+  { value: "ALCOHOLIC_BEVERAGE", label: "Bebida alcoólica" },
+  { value: "INDUSTRIAL_PROCESSING_ONLY", label: "Produto destinado exclusivamente ao processamento industrial" },
+  { value: "FOOD_SERVICE_ONLY", label: "Produto destinado exclusivamente a serviços de alimentação" },
+  { value: "FOOD_ADDITIVE_OR_PROCESSING_AID", label: "Aditivo alimentar ou coadjuvante de tecnologia" },
+  { value: "DIETARY_FORMULA_FOR_INBORN_ERRORS", label: "Fórmula dietoterápica para erros inatos do metabolismo" }
+];
 
 export type FrontOfPackApplicabilityReasonCode =
   | "GENERAL_MANDATORY_RULE"

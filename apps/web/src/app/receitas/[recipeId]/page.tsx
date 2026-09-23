@@ -323,7 +323,10 @@ export default async function RecipeSummaryPage({ params, searchParams }: Recipe
   try {
     nutritionResult = calculateRecipeNutrition(recipe);
     frontOfPackDecision = composeFrontOfPackDecision(
-      evaluateFrontOfPackApplicability({ foodCategory: recipe.foodCategory }),
+      evaluateFrontOfPackApplicability({
+        foodCategory: recipe.foodCategory,
+        regulatoryCategory: recipe.regulatoryCategory
+      }),
       evaluateFrontOfPack(nutritionResult)
     );
     regulatoryNutritionResult = calculateNutritionPerServing(nutritionResult, recipe.servingSize, packagingUnit);
