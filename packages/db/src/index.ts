@@ -40,6 +40,8 @@ export type {
   RecipeDisclosureStatus,
   RecipeIngredient,
   RecipePhysicalState,
+  Subscription,
+  SubscriptionStatus,
   User
 } from "@prisma/client";
 

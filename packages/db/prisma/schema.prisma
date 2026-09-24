@@ -140,8 +140,10 @@ enum CommercialPlan {
 enum SubscriptionStatus {
   PENDING
   ACTIVE
+  PAST_DUE
   ENDED
   CANCELED
+  EXPIRED
 }
 
 model Ingredient {
@@ -257,6 +259,7 @@ model Subscription {
   currentPeriodStart     DateTime?
   currentPeriodEnd       DateTime?
   provider               String?
+  providerCustomerId     String?
   providerSubscriptionId String?
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
