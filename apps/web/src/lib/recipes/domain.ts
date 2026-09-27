@@ -1,8 +1,8 @@
-import {
+import type {
   FrontOfPackPackagingCondition,
   FrontOfPackRegulatoryCategory,
-  type FrontOfPackNutrientAdditionStatus,
-  type IngredientBaseUnit,
+  FrontOfPackNutrientAdditionStatus,
+  IngredientBaseUnit,
   RecipeCrossContaminationRisk,
   RecipeDisclosureStatus,
   RecipePhysicalState
@@ -87,8 +87,34 @@ export class RecipeValidationError extends Error {
 const YIELD_TOLERANCE = 0.01;
 const DISCLOSURE_STATUSES = ["CONTAINS", "DOES_NOT_CONTAIN", "NEEDS_REVIEW"] as const;
 const CROSS_CONTAMINATION_RISKS = ["YES", "NO", "UNKNOWN"] as const;
-const REGULATORY_CATEGORIES = Object.values(FrontOfPackRegulatoryCategory);
-const PACKAGING_CONDITIONS = Object.values(FrontOfPackPackagingCondition);
+const REGULATORY_CATEGORIES: readonly FrontOfPackRegulatoryCategory[] = [
+  "OUTSIDE_ANNEX_XVI",
+  "PLAIN_PLANT_FOOD",
+  "FLOUR",
+  "MEAT_OR_FISH",
+  "EGG",
+  "FERMENTED_MILK",
+  "CHEESE",
+  "MAMMAL_MILK",
+  "MILK_POWDER",
+  "OLIVE_OR_OTHER_VEGETABLE_OIL",
+  "SALT",
+  "INFANT_FORMULA",
+  "ENTERAL_FORMULA",
+  "WEIGHT_CONTROL_FOOD",
+  "DIETARY_SUPPLEMENT",
+  "ALCOHOLIC_BEVERAGE",
+  "INDUSTRIAL_PROCESSING_ONLY",
+  "FOOD_SERVICE_ONLY",
+  "FOOD_ADDITIVE_OR_PROCESSING_AID",
+  "DIETARY_FORMULA_FOR_INBORN_ERRORS"
+];
+const PACKAGING_CONDITIONS: readonly FrontOfPackPackagingCondition[] = [
+  "PACKAGED_IN_ABSENCE_OF_CONSUMER",
+  "NOT_PACKAGED_IN_ABSENCE_OF_CONSUMER",
+  "PACKED_AT_POINT_OF_SALE_AT_CONSUMER_REQUEST",
+  "PREPARED_OR_PORTIONED_AND_SOLD_ON_PREMISES"
+];
 const NUTRIENT_ADDITION_STATUSES: readonly FrontOfPackNutrientAdditionStatus[] = ["YES", "NO", "UNKNOWN"];
 const CONDITIONAL_REGULATORY_CATEGORIES: readonly FrontOfPackRegulatoryCategory[] = [
   "PLAIN_PLANT_FOOD",

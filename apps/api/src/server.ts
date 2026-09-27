@@ -3,6 +3,7 @@ import Fastify from "fastify";
 import { z } from "zod";
 
 const envSchema = z.object({
+  PORT: z.coerce.number().int().positive().optional(),
   API_PORT: z.coerce.number().int().positive().default(3333),
   CORS_ORIGIN: z.string().optional(),
   NODE_ENV: z.string().default("development")
@@ -10,6 +11,10 @@ const envSchema = z.object({
 
 export function readEnv() {
   return envSchema.parse(process.env);
+}
+
+export function resolvePort(env: ReturnType<typeof readEnv>) {
+  return env.PORT ?? env.API_PORT;
 }
 
 export async function buildServer() {

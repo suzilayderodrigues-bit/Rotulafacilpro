@@ -15,7 +15,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ bar
   try {
     const body = format === "svg" ? renderBarcodeSvg(input).svg : await renderBarcodePng(input);
     if (!body) return new Response("Imagem indisponível.", { status: 503 });
-    return new Response(body, {
+    const responseBody = typeof body === "string" ? body : new Uint8Array(body);
+    return new Response(responseBody, {
       headers: {
         "Content-Type": format === "svg" ? "image/svg+xml; charset=utf-8" : "image/png",
         "Content-Disposition": `attachment; filename="${barcodeDownloadName(barcode.value, format)}"`,

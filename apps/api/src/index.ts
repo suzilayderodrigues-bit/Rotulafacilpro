@@ -1,11 +1,11 @@
-import { buildServer, readEnv } from "./server.js";
+import { buildServer, readEnv, resolvePort } from "./server.js";
 
 const env = readEnv();
 const app = await buildServer();
 
 try {
   await app.listen({
-    port: env.API_PORT,
+    port: resolvePort(env),
     host: "0.0.0.0"
   });
 } catch (error) {

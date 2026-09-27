@@ -33,7 +33,8 @@ export async function createBarcodeWithEntitlement(userId: string, draft: Barcod
         AND ("endsAt" IS NULL OR CURRENT_TIMESTAMP < "endsAt")
       FOR UPDATE
     `;
-    if (locked.length !== 1 || locked[0].plan !== current.plan) {
+    const lockedSubscription = locked[0];
+    if (locked.length !== 1 || !lockedSubscription || lockedSubscription.plan !== current.plan) {
       throw new BarcodeEntitlementError("SUBSCRIPTION_REQUIRES_REVIEW");
     }
 
@@ -54,6 +55,7 @@ export async function createBarcodeWithEntitlement(userId: string, draft: Barcod
       });
       if (cycles.length !== 1) throw new BarcodeEntitlementError("MISSING_BILLING_CYCLE");
       const cycle = cycles[0];
+      if (!cycle) throw new BarcodeEntitlementError("MISSING_BILLING_CYCLE");
       const incremented = await tx.billingCycle.updateMany({
         where: {
           id: cycle.id, userId, subscriptionId: current.subscriptionId, planSnapshot: "MONTHLY",

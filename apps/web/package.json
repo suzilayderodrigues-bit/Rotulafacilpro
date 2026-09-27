@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "start": "next start --hostname 0.0.0.0",
     "lint": "eslint .",
     "test:auth": "tsx scripts/auth-flow-smoke.ts",
     "typecheck": "tsc --noEmit"

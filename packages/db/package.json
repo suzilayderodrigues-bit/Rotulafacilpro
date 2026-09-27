@@ -10,6 +10,7 @@
     "build": "prisma generate",
     "lint": "eslint .",
     "prisma:generate": "prisma generate",
+    "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:format": "prisma format",
     "typecheck": "tsc --noEmit"
   },
