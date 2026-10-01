@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { LogOut } from "lucide-react";
+import { logoutAction } from "@/lib/auth/actions";
 import icon from "../../../../../assets/branding/icone.png.jpg";
 
 export function Topbar() {
@@ -10,10 +11,12 @@ export function Topbar() {
         <Image src={icon} alt="Ícone oficial do Rotula Fácil Pro" className="size-9 rounded-[var(--radius-md)] object-cover" priority />
         <span className="truncate text-sm font-semibold leading-tight">Rotula Fácil Pro</span>
       </Link>
-      <Link href="/sair" className="inline-flex h-9 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-white/20 px-3 text-sm font-semibold text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]">
-        <LogOut className="size-4" />
-        <span className="hidden sm:inline">Sair</span>
-      </Link>
+      <form action={logoutAction}>
+        <button type="submit" className="inline-flex h-9 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-white/20 px-3 text-sm font-semibold text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cyan)]">
+          <LogOut className="size-4" />
+          <span className="hidden sm:inline">Sair</span>
+        </button>
+      </form>
     </header>
   );
 }

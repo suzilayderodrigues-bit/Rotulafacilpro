@@ -30,7 +30,8 @@ async function main() {
   assert(!topbar.includes('aria-label="Buscar"'));
   assert(!topbar.includes('aria-label="Notificações"'));
   assert(!topbar.includes('aria-label="Perfil"'));
-  assert(topbar.includes('href="/sair"'));
+  assert(topbar.includes('action={logoutAction}'));
+  assert(!topbar.includes('href="/sair"'));
   assert(authActions.match(/redirect\("\/dashboard"\)/g)?.length === 2);
   assert(home.includes('redirect(user ? "/dashboard" : "/login")'));
 
