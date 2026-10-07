@@ -1,3 +1,4 @@
+import { snapshotBaseRotula, assertBaseRotulaPreserved } from "./base-rotula-preservation";
 import { prisma } from "@rotula-facil-pro/db";
 import {
   nutritionNutrientFields,
@@ -59,6 +60,7 @@ function expectIncompatibleUnit(run: () => unknown) {
 }
 
 async function main() {
+  const baseSnapshot = await snapshotBaseRotula();
   const dailyValueValidation = validateDailyValueRules();
   assert(dailyValueValidation.ruleCount === 11, "Devem existir 11 VDs oficiais para os nutrientes suportados.");
 
@@ -101,7 +103,7 @@ async function main() {
   assert(preparationWithoutServing.nutrients.carbohydratesG.perServing === null, "Regra baseada em preparo sem porção efetiva não pode calcular.");
 
   const baseRotula = await prisma.ingredient.count({ where: { source: "BASE_ROTULA" } });
-  assert(baseRotula === 15, "BASE_ROTULA deve permanecer com 15 registros.");
+  await assertBaseRotulaPreserved(baseSnapshot);
 
   console.log(JSON.stringify({
     dailyValueRules: dailyValueValidation.ruleCount,

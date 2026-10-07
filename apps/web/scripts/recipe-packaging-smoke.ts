@@ -1,3 +1,4 @@
+import { snapshotBaseRotula, assertBaseRotulaPreserved } from "./base-rotula-preservation";
 import { prisma } from "@rotula-facil-pro/db";
 import {
   nutritionNutrientFields,
@@ -60,6 +61,7 @@ function expectUnitMismatch(run: () => unknown) {
 }
 
 async function main() {
+  const baseSnapshot = await snapshotBaseRotula();
   const individual = validateRecipePackagingInput(
     {
       netQuantity: 500,
@@ -146,7 +148,7 @@ async function main() {
   assert(incomplete.nutrients.saturatedFatG.perServing === 0, "Zero explícito deve continuar disponível.");
 
   const baseRotula = await prisma.ingredient.count({ where: { source: "BASE_ROTULA" } });
-  assert(baseRotula === 15, "BASE_ROTULA deve permanecer com 15 registros.");
+  await assertBaseRotulaPreserved(baseSnapshot);
 
   console.log(
     JSON.stringify(

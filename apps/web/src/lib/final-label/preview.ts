@@ -1,4 +1,5 @@
 import { findBarcodeByRecipe } from "@/lib/barcodes/repository";
+import { resolveIngredientAllergenState, type IngredientAllergenState } from "@rotula-facil-pro/db/allergens";
 import { renderBarcodeSvg, type BarcodeRenderResult } from "@/lib/barcodes/render";
 import { calculateRecipeNutrition, NutritionCalculationError } from "@/lib/nutrition";
 import { findRecipeForNutrition } from "@/lib/recipes/repository";
@@ -28,6 +29,7 @@ export type FinalLabelPreview = {
   ingredients: string[];
   ingredientsText: string | null;
   allergens: string[];
+  allergenStatus: IngredientAllergenState;
   glutenStatus: Recipe["glutenStatus"];
   lactoseStatus: Recipe["lactoseStatus"];
   crossContaminationRisk: Recipe["crossContaminationRisk"];
@@ -65,6 +67,14 @@ export function composeFinalLabelPreview(recipe: Recipe, barcode: Barcode | null
   if (!ingredientsText) add("MISSING_INGREDIENTS", "BLOCK", "Adicione os ingredientes da receita.");
   if (recipe.ingredients.some(({ ingredient }) => ingredient.source === "CUSTOM")) {
     add("CHECK_COMPOUND_INGREDIENTS", "WARNING", "Revise manualmente se algum ingrediente próprio é composto: subingredientes não estão estruturados na base.");
+  }
+
+  const hasUnknownAllergens = recipe.ingredients.some(({ ingredient }) => resolveIngredientAllergenState(ingredient) === "UNKNOWN");
+  const knownButUnconfirmed = recipe.confirmedAllergens.length === 0 && recipe.ingredients.some(({ ingredient }) => resolveIngredientAllergenState(ingredient) === "KNOWN");
+  const allergenStatus: IngredientAllergenState = hasUnknownAllergens || knownButUnconfirmed ? "UNKNOWN"
+    : recipe.confirmedAllergens.length ? "KNOWN" : "NONE";
+  if (allergenStatus === "UNKNOWN") {
+    add("ALLERGENS_REQUIRE_REVIEW", "REVIEW", "Há alergênicos desconhecidos nos ingredientes ou declarações ainda não confirmadas. Não é possível confirmar ausência nem exportar o PDF.");
   }
 
   if (!recipe.informationReviewedAt || !recipe.glutenStatus || !recipe.lactoseStatus || !recipe.crossContaminationRisk) {
@@ -132,7 +142,7 @@ export function composeFinalLabelPreview(recipe: Recipe, barcode: Barcode | null
   return {
     recipeId: recipe.id, name: recipe.name, physicalState: recipe.physicalState,
     netQuantityLabel, ingredients, ingredientsText,
-    allergens: recipe.confirmedAllergens, glutenStatus: recipe.glutenStatus,
+    allergens: recipe.confirmedAllergens, allergenStatus, glutenStatus: recipe.glutenStatus,
     lactoseStatus: recipe.lactoseStatus, crossContaminationRisk: recipe.crossContaminationRisk,
     crossContaminationAllergens: recipe.crossContaminationAllergens,
     nutritionTable, frontOfPack, barcode: barcodePreview, issues, status

@@ -59,9 +59,10 @@ const colors: Record<LabelTemplate, { accent: string; border: string; surface: s
 
 function disclosureLines(preview: FinalLabelPreview) {
   const lines: string[] = [];
+  if (preview.allergenStatus === "UNKNOWN") lines.push("ALERGÊNICOS: informação não determinada; revisão necessária.");
   lines.push(preview.allergens.length
     ? `ALÉRGICOS: CONTÉM ${preview.allergens.join(", ")}.`
-    : "ALÉRGICOS: nenhum alergênico confirmado.");
+    : preview.allergenStatus === "NONE" ? "ALERGÊNICOS: ausência confirmada na revisão." : "ALERGÊNICOS: informação pendente.");
   lines.push(preview.glutenStatus === "CONTAINS" ? "CONTÉM GLÚTEN."
     : preview.glutenStatus === "DOES_NOT_CONTAIN" ? "NÃO CONTÉM GLÚTEN." : "GLÚTEN: revisão necessária.");
   lines.push(preview.lactoseStatus === "CONTAINS" ? "CONTÉM LACTOSE."
@@ -100,6 +101,9 @@ function measureLayout(preview: FinalLabelPreview, format: LabelFormat): PdfLayo
 }
 
 export function assessFinalLabelPdf(preview: FinalLabelPreview, format: LabelFormat): FinalLabelPdfAssessment {
+  if (preview.allergenStatus === "UNKNOWN") {
+    return { allowed: false, code: "REQUIRES_REVIEW", message: "Revise os alergênicos desconhecidos antes de baixar o PDF. Informação ausente não confirma ausência." };
+  }
   if (preview.status === "INCOMPLETE") {
     return { allowed: false, code: "INCOMPLETE", message: "Complete as informações obrigatórias do rótulo antes de baixar o PDF." };
   }

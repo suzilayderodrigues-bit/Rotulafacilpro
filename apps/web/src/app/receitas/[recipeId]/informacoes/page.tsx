@@ -4,6 +4,7 @@ import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, EmptyState
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { requireUser } from "@/lib/auth/session";
+import { resolveIngredientAllergenState } from "@rotula-facil-pro/db/allergens";
 import { updateRecipeInformationAction } from "@/lib/recipes/actions";
 import { findRecipe } from "@/lib/recipes/repository";
 import { cn } from "@/lib/utils";
@@ -133,7 +134,7 @@ export default async function RecipeInformationStepPage({ params, searchParams }
     ...recipe.ingredients.flatMap((item) => item.ingredient.allergens),
     ...recipe.confirmedAllergens
   ]);
-  const hasUnknownAllergens = recipe.ingredients.some((item) => item.ingredient.allergens.length === 0);
+  const hasUnknownAllergens = recipe.ingredients.some((item) => resolveIngredientAllergenState(item.ingredient) === "UNKNOWN");
   const glutenKnownTrue = recipe.ingredients.some((item) => item.ingredient.containsGluten === true);
   const glutenKnownFalse = recipe.ingredients.some((item) => item.ingredient.containsGluten === false);
   const glutenUnknown = recipe.ingredients.some((item) => item.ingredient.containsGluten === null);
@@ -216,7 +217,7 @@ export default async function RecipeInformationStepPage({ params, searchParams }
 
                 {hasUnknownAllergens ? (
                   <div className="mt-4 rounded-[var(--radius-md)] border border-[#f4d5b6] bg-[#fff8f0] px-4 py-3 text-sm text-[#8a4b15]">
-                    Alguns ingredientes não possuem informações completas sobre alergênicos. Revise antes de continuar.
+                    Alguns ingredientes têm alergênicos não determinados. Isso não significa ausência. O PDF do rótulo ficará bloqueado para revisão enquanto essa informação estiver desconhecida.
                   </div>
                 ) : null}
 

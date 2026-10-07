@@ -22,7 +22,7 @@ async function user(label: string) {
 async function ingredient(userId: string, name: string, addedSugarsG: number) {
   const created = await prisma.ingredient.create({ data: {
     userId, source: "CUSTOM", name, normalizedName: name.toLowerCase(), category: "Teste", dataOrigin: "SMOKE",
-    baseUnit: "GRAM", baseQuantity: 100, caloriesKcal: 150, carbohydratesG: 30, sugarsG: 20,
+    baseUnit: "GRAM", baseQuantity: 100, allergenStatus: "NONE", allergens: [], caloriesKcal: 150, carbohydratesG: 30, sugarsG: 20,
     addedSugarsG, proteinsG: 3, totalFatG: 2, saturatedFatG: 1, transFatG: 0, fiberG: 1, sodiumMg: 50
   } });
   ingredientIds.push(created.id);

@@ -1,3 +1,4 @@
+import { snapshotBaseRotula, assertBaseRotulaPreserved } from "./base-rotula-preservation";
 import { readFileSync } from "node:fs";
 import { prisma } from "@rotula-facil-pro/db";
 import {
@@ -54,6 +55,7 @@ function statuses(
 }
 
 async function main() {
+  const baseSnapshot = await snapshotBaseRotula();
   assert(frontOfPackRules.length === 3, "Devem existir três regras de rotulagem frontal.");
   assert(
     frontOfPackRules.every((rule) => rule.regulatoryVersion === regulatoryServingVersion),
@@ -115,7 +117,7 @@ async function main() {
   assert(!/7\.5|14\.99|15\.01|299\.99|300\.01|599\.99|600\.01/.test(componentSource), "Limites não podem estar no componente visual.");
 
   const baseRotula = await prisma.ingredient.count({ where: { source: "BASE_ROTULA" } });
-  assert(baseRotula === 15, "BASE_ROTULA deve permanecer com 15 registros.");
+  await assertBaseRotulaPreserved(baseSnapshot);
 
   console.log(JSON.stringify({
     solidBelowEqualAbove: "OK",

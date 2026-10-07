@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { type IngredientBaseUnit } from "@rotula-facil-pro/db";
+import { allergenStorage, normalizeAllergenDeclaration, type IngredientAllergenState } from "@rotula-facil-pro/db/allergens";
 import { requireUser } from "@/lib/auth/session";
 import { ingredientCategories } from "./categories";
 import {
@@ -26,6 +27,7 @@ type CustomIngredientFormValues = {
   containsGluten: boolean | null;
   containsLactose: boolean | null;
   allergens: string[];
+  allergenStatus: IngredientAllergenState;
 };
 
 function formString(formData: FormData, key: string) {
@@ -65,6 +67,9 @@ function parseCustomIngredientForm(formData: FormData): CustomIngredientFormValu
     return acc;
   }, {} as Record<IngredientNutrientField, string>);
   const allergensText = formString(formData, "allergens");
+  const declaration = normalizeAllergenDeclaration(allergensText ? [allergensText] :
+    formString(formData, "allergenStatus") === "NONE" ? [] : null,
+    formString(formData, "allergenStatus") || undefined);
 
   return {
     name,
@@ -77,7 +82,7 @@ function parseCustomIngredientForm(formData: FormData): CustomIngredientFormValu
     }),
     containsGluten: parseBooleanState(formString(formData, "containsGluten")),
     containsLactose: parseBooleanState(formString(formData, "containsLactose")),
-    allergens: allergensText ? [allergensText] : []
+    ...allergenStorage(declaration)
   };
 }
 
@@ -94,6 +99,7 @@ function customIngredientData(parsed: CustomIngredientFormValues) {
     baseQuantity: 100,
     ...parsed.nutrients,
     allergens: parsed.allergens,
+    allergenStatus: parsed.allergenStatus,
     containsGluten: parsed.containsGluten,
     containsLactose: parsed.containsLactose
   };

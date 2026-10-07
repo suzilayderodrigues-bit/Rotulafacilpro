@@ -16,6 +16,7 @@ import {
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { requireUser } from "@/lib/auth/session";
+import { resolveIngredientAllergenState } from "@rotula-facil-pro/db/allergens";
 import { ingredientCategories } from "@/lib/ingredients/categories";
 import {
   findBaseRotulaIngredient,
@@ -159,7 +160,8 @@ function formInitial(ingredient: IngredientCardItem): CustomIngredientFormInitia
     nutrients,
     containsGluten: boolInitial(ingredient.containsGluten),
     containsLactose: boolInitial(ingredient.containsLactose),
-    allergens: ingredient.allergens.join(", ")
+    allergens: ingredient.allergens.join(", "),
+    allergenStatus: resolveIngredientAllergenState(ingredient)
   };
 }
 
@@ -249,7 +251,7 @@ function IngredientDetail({ ingredient }: { ingredient: IngredientCardItem }) {
         <dl className="mt-3 space-y-3 text-sm">
           <div className="grid gap-1 sm:grid-cols-[150px_1fr]"><dt className="text-[var(--muted)]">Contém glúten</dt><dd className="font-medium text-[var(--foreground)]">{boolLabel(ingredient.containsGluten)}</dd></div>
           <div className="grid gap-1 sm:grid-cols-[150px_1fr]"><dt className="text-[var(--muted)]">Contém lactose</dt><dd className="font-medium text-[var(--foreground)]">{boolLabel(ingredient.containsLactose)}</dd></div>
-          <div className="grid gap-1 sm:grid-cols-[150px_1fr]"><dt className="text-[var(--muted)]">Alergênicos</dt><dd className="font-medium text-[var(--foreground)]">{ingredient.allergens.length > 0 ? ingredient.allergens.join(", ") : "Não informado"}</dd></div>
+          <div className="grid gap-1 sm:grid-cols-[150px_1fr]"><dt className="text-[var(--muted)]">Alergênicos</dt><dd className="font-medium text-[var(--foreground)]">{resolveIngredientAllergenState(ingredient) === "UNKNOWN" ? "Não determinado" : resolveIngredientAllergenState(ingredient) === "NONE" ? "Ausência confirmada na fonte" : ingredient.allergens.join(", ")}</dd></div>
         </dl>
       </div>
 

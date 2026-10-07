@@ -1,3 +1,4 @@
+import { snapshotBaseRotula, assertBaseRotulaPreserved } from "./base-rotula-preservation";
 import { readFileSync } from "node:fs";
 import { prisma } from "@rotula-facil-pro/db";
 import {
@@ -47,6 +48,7 @@ const applicable = evaluateFrontOfPackApplicability({
 });
 
 async function main() {
+  const baseSnapshot = await snapshotBaseRotula();
   assert(applicable.status === "APPLICABLE", "Categoria revisada fora do Anexo XVI deve ser APPLICABLE.");
   assert(applicable.legalEffect === "MANDATORY", "Regra geral aplicável deve ser obrigatória.");
 
@@ -148,7 +150,7 @@ async function main() {
   assert(!componentSource.includes("evaluateFrontOfPackApplicability"), "O componente não pode decidir aplicabilidade.");
 
   const baseRotula = await prisma.ingredient.count({ where: { source: "BASE_ROTULA" } });
-  assert(baseRotula === 15, "BASE_ROTULA deve permanecer com 15 registros.");
+  await assertBaseRotulaPreserved(baseSnapshot);
 
   console.log(JSON.stringify({
     applicable: "OK",

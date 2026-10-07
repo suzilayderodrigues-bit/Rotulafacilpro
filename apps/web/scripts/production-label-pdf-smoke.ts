@@ -1,3 +1,4 @@
+import { snapshotBaseRotula, assertBaseRotulaPreserved } from "./base-rotula-preservation";
 import assert from "node:assert/strict";
 import { prisma } from "@rotula-facil-pro/db";
 import { millimetersToPoints } from "../src/lib/final-label/pdf";
@@ -51,6 +52,7 @@ function pdfPageCount(buffer: Buffer) {
 }
 
 async function main() {
+  const baseSnapshot = await snapshotBaseRotula();
   const before = await Promise.all([
     prisma.user.count(),
     prisma.recipe.count(),
@@ -113,8 +115,8 @@ async function main() {
     prisma.barcodeUsage.count()
   ]);
   assert.deepEqual(after, before, "Gerar etiquetas não pode persistir registros.");
-  assert.equal(await prisma.ingredient.count({ where: { source: "BASE_ROTULA" } }), 15);
-  console.log("PDF de etiquetas: 3 tamanhos, A4, paginação, validações, disposition e zero persistência: OK. BASE_ROTULA=15.");
+  await assertBaseRotulaPreserved(baseSnapshot);
+  console.log("PDF de etiquetas: 3 tamanhos, A4, paginação, validações, disposition e zero persistência: OK. BASE_ROTULA preservada.");
 }
 
 main().catch((error) => { console.error(error); process.exitCode = 1; }).finally(() => prisma.$disconnect());

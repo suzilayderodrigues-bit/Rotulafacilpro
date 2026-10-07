@@ -18,6 +18,7 @@ export type CustomIngredientFormInitial = {
   containsGluten?: "yes" | "no" | "unknown";
   containsLactose?: "yes" | "no" | "unknown";
   allergens?: string;
+  allergenStatus?: "UNKNOWN" | "KNOWN" | "NONE";
 };
 
 const nutrientFields = [
@@ -180,7 +181,13 @@ export function CustomIngredientForm({
           </div>
           <div className="sm:col-span-2">
             <Label htmlFor="allergens">Alergênicos declarados na embalagem</Label>
+            <div className="my-2 grid gap-2 sm:grid-cols-3">
+              <Radio name="allergenStatus" value="UNKNOWN" label="Não determinado" defaultChecked={!initial?.allergenStatus || initial.allergenStatus === "UNKNOWN"} />
+              <Radio name="allergenStatus" value="KNOWN" label="Informados na fonte" defaultChecked={initial?.allergenStatus === "KNOWN"} />
+              <Radio name="allergenStatus" value="NONE" label="Ausência confirmada" defaultChecked={initial?.allergenStatus === "NONE"} />
+            </div>
             <Textarea id="allergens" name="allergens" placeholder="Leite, soja e derivados de amendoim" defaultValue={initial?.allergens ?? ""} />
+            <p className="mt-2 text-xs text-[var(--muted)]">Campo vazio não confirma ausência. Se informar alergênicos, selecione “Informados na fonte”. Use ausência confirmada somente com informação explícita da fonte.</p>
           </div>
         </div>
       </section>

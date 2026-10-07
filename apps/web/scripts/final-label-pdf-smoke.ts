@@ -1,3 +1,4 @@
+import { snapshotBaseRotula, assertBaseRotulaPreserved } from "./base-rotula-preservation";
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 import { prisma } from "@rotula-facil-pro/db";
@@ -23,7 +24,7 @@ const rows = [
 const ready = {
   recipeId: "recipe-pdf", name: "Palha Italiana Clássica", physicalState: "SOLID_OR_SEMISOLID",
   netQuantityLabel: "PESO LÍQUIDO 100 g", ingredients: ["Leite", "Cacau"],
-  ingredientsText: "INGREDIENTES: leite, cacau.", allergens: ["LEITE"],
+  ingredientsText: "INGREDIENTES: leite, cacau.", allergens: ["LEITE"], allergenStatus: "KNOWN",
   glutenStatus: "DOES_NOT_CONTAIN", lactoseStatus: "CONTAINS", crossContaminationRisk: "NO",
   crossContaminationAllergens: [], issues: [], status: "READY",
   barcode: {
@@ -48,6 +49,7 @@ const ready = {
 assert(Math.abs(millimetersToPoints(50) - 141.732283) < 0.001);
 assert(Math.abs(millimetersToPoints(170) - 481.889764) < 0.001);
 assert.equal(assessFinalLabelPdf(ready, "CINTA").allowed, true);
+assert.equal(assessFinalLabelPdf({ ...ready, allergenStatus: "UNKNOWN" }, "CINTA").code, "REQUIRES_REVIEW");
 assert.equal(assessFinalLabelPdf({ ...ready, status: "INCOMPLETE" }, "CINTA").code, "INCOMPLETE");
 assert.equal(assessFinalLabelPdf({ ...ready, status: "REQUIRES_REVIEW" }, "CINTA").code, "REQUIRES_REVIEW");
 assert.equal(assessFinalLabelPdf({ ...ready, ingredientsText: `INGREDIENTES: ${"ingrediente extenso, ".repeat(100)}` }, "CINTA").code, "CONTENT_OVERFLOW");
@@ -56,6 +58,7 @@ assert.notEqual(nutritionPdfCell(null), "0");
 assert.equal(finalLabelPdfFilename("  Palha Italiana / Edição São João!  "), "rotula-palha-italiana-edicao-sao-joao.pdf");
 
 async function main() {
+  const baseSnapshot = await snapshotBaseRotula();
   const before = await Promise.all([
     prisma.barcode.count(),
     prisma.barcodeUsage.count(),
@@ -77,9 +80,9 @@ async function main() {
     prisma.billingCycle.aggregate({ _sum: { barcodeUsed: true } })
   ]);
   assert.deepEqual(after, before, "Exportar PDF não pode criar Barcode, Usage ou alterar barcodeUsed.");
-  assert.equal(await prisma.ingredient.count({ where: { source: "BASE_ROTULA" } }), 15);
+  await assertBaseRotulaPreserved(baseSnapshot);
   if (process.env.PDF_SMOKE_OUTPUT) await writeFile(process.env.PDF_SMOKE_OUTPUT, generated.buffer);
-  console.log("PDF: assinatura, MediaBox 50 × 170 mm, página única, bloqueios, null, filename e quota intacta: OK. BASE_ROTULA=15.");
+  console.log("PDF: assinatura, MediaBox 50 × 170 mm, página única, bloqueios, null, filename e quota intacta: OK. BASE_ROTULA preservada.");
 }
 
 main().catch((error) => { console.error(error); process.exitCode = 1; }).finally(() => prisma.$disconnect());

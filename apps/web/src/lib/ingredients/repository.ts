@@ -90,6 +90,19 @@ export function listAccessibleIngredients(userId: string, filters?: { search?: s
   });
 }
 
+/** Compact selector: bounded projection, no nutrient/owner data sent to the browser. */
+export async function searchAccessibleIngredients(userId: string, search: string, page: number) {
+  const pageSize = 20;
+  const rows = await prisma.ingredient.findMany({
+    where: { AND: [accessibleIngredientWhere(userId), ingredientTextSearchWhere(search)] },
+    select: { id: true, name: true, category: true, source: true, baseUnit: true },
+    orderBy: [{ name: "asc" }, { id: "asc" }],
+    skip: page * pageSize,
+    take: pageSize + 1
+  });
+  return { items: rows.slice(0, pageSize), hasMore: rows.length > pageSize };
+}
+
 export function listBaseRotulaIngredients(filters?: { search?: string; category?: string }) {
   return prisma.ingredient.findMany({
     where: baseRotulaIngredientWhere(filters),

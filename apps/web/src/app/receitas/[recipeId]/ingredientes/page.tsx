@@ -1,5 +1,5 @@
 ﻿import Link from "next/link";
-import { Check, Circle, Plus, Search, Trash2 } from "lucide-react";
+import { Check, Circle, Trash2 } from "lucide-react";
 import {
   Badge,
   Button,
@@ -15,8 +15,8 @@ import {
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { requireUser } from "@/lib/auth/session";
-import { listAccessibleIngredients } from "@/lib/ingredients/repository";
-import { addRecipeIngredientAction, removeRecipeIngredientAction, updateRecipeIngredientAction } from "@/lib/recipes/actions";
+import { removeRecipeIngredientAction, updateRecipeIngredientAction } from "@/lib/recipes/actions";
+import { IngredientSelector } from "./ingredient-selector";
 import { findRecipe } from "@/lib/recipes/repository";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +26,6 @@ type RecipeIngredientsStepPageProps = {
 };
 
 type RecipeItem = NonNullable<Awaited<ReturnType<typeof findRecipe>>>["ingredients"][number];
-type AvailableIngredient = Awaited<ReturnType<typeof listAccessibleIngredients>>[number];
 
 const steps = ["Produto", "Ingredientes", "Rendimento", "Informações"];
 
@@ -59,11 +58,6 @@ function sourceLabel(source: string) {
   return source === "CUSTOM" ? "Meu ingrediente" : "Base Rotula";
 }
 
-function ingredientsHref(recipeId: string, search?: string) {
-  if (!search) return "/receitas/" + recipeId + "/ingredientes";
-  return "/receitas/" + recipeId + "/ingredientes?busca=" + encodeURIComponent(search);
-}
-
 function Stepper() {
   return (
     <ol className="grid gap-2 sm:grid-cols-4" aria-label="Etapas da receita">
@@ -94,48 +88,6 @@ function Stepper() {
         );
       })}
     </ol>
-  );
-}
-
-function AvailableIngredientCard({ ingredient, recipeId, disabled }: { ingredient: AvailableIngredient; recipeId: string; disabled: boolean }) {
-  return (
-    <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-white p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-[var(--foreground)]">{ingredient.name}</h3>
-          <p className="mt-1 text-xs font-medium text-[var(--muted)]">{sourceLabel(ingredient.source)}</p>
-        </div>
-        <Badge variant={ingredient.source === "CUSTOM" ? "cyan" : "secondary"}>{unitLabel(ingredient.baseUnit)}</Badge>
-      </div>
-
-      <form action={addRecipeIngredientAction} className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto]">
-        <input type="hidden" name="recipeId" value={recipeId} />
-        <input type="hidden" name="ingredientId" value={ingredient.id} />
-        <input type="hidden" name="unit" value={ingredient.baseUnit} />
-        <Label htmlFor={"amount-" + ingredient.id} className="sr-only">Quantidade</Label>
-        <div className="relative">
-          <Input
-            id={"amount-" + ingredient.id}
-            name="amount"
-            type="number"
-            min="0.01"
-            step="0.01"
-            inputMode="decimal"
-            placeholder="Quantidade"
-            disabled={disabled}
-            required
-            className="pr-12"
-          />
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-[var(--muted)]">
-            {unitLabel(ingredient.baseUnit)}
-          </span>
-        </div>
-        <Button type="submit" className="w-full sm:w-auto" disabled={disabled}>
-          <Plus className="size-4" />
-          Adicionar
-        </Button>
-      </form>
-    </div>
   );
 }
 
@@ -175,7 +127,6 @@ export default async function RecipeIngredientsStepPage({ params, searchParams }
   const user = await requireUser();
   const { recipeId } = await params;
   const query = searchParams ? await searchParams : {};
-  const search = cleanParam(query.busca);
   const status = cleanParam(query.status);
   const recipe = await findRecipe(user.id, recipeId);
 
@@ -203,10 +154,6 @@ export default async function RecipeIngredientsStepPage({ params, searchParams }
     );
   }
 
-  const [availableIngredients] = await Promise.all([
-    listAccessibleIngredients(user.id, { search })
-  ]);
-  const addedIngredientIds = new Set(recipe.ingredients.map((item) => item.ingredientId));
   const canContinue = recipe.ingredients.length > 0;
 
   return (
@@ -240,31 +187,16 @@ export default async function RecipeIngredientsStepPage({ params, searchParams }
               <Toast className={cn("mb-5", !["adicionado", "removido", "atualizado"].includes(status) && "border-[#f0c4c0]")}>{statusMessages[status] ?? statusMessages.formulario}</Toast>
             ) : null}
 
-            <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+            <div className="grid gap-6">
               <Card className="shadow-none">
                 <CardHeader className="flex-col gap-3">
                   <div>
                     <CardTitle>Ingredientes disponíveis</CardTitle>
                     <CardDescription>Busque na Base Rotula ou nos seus ingredientes cadastrados.</CardDescription>
                   </div>
-                  <form action={ingredientsHref(recipe.id)} className="w-full">
-                    <Label htmlFor="busca" className="sr-only">Buscar ingrediente</Label>
-                    <div className="relative">
-                      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--muted)]" />
-                      <Input id="busca" name="busca" defaultValue={search ?? ""} placeholder="Ex.: leite condensado, farinha, chocolate..." className="pl-9" />
-                    </div>
-                  </form>
                 </CardHeader>
 
-                {availableIngredients.length > 0 ? (
-                  <div className="grid gap-3 lg:grid-cols-2">
-                    {availableIngredients.map((ingredient) => (
-                      <AvailableIngredientCard key={ingredient.id} ingredient={ingredient} recipeId={recipe.id} disabled={addedIngredientIds.has(ingredient.id)} />
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState title="Nenhum ingrediente encontrado" description="Tente buscar por outro nome ou cadastre um ingrediente personalizado em Meus ingredientes." />
-                )}
+                <IngredientSelector recipeId={recipe.id} addedIds={recipe.ingredients.map((item) => item.ingredientId)} />
               </Card>
 
               <Card className="shadow-none">

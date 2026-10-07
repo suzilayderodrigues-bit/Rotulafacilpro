@@ -1,3 +1,4 @@
+import { snapshotBaseRotula, assertBaseRotulaPreserved } from "./base-rotula-preservation";
 import { prisma } from "@rotula-facil-pro/db";
 import {
   nutritionNutrientFields,
@@ -40,6 +41,7 @@ function nutritionResult(
 }
 
 async function main() {
+  const baseSnapshot = await snapshotBaseRotula();
   const validation = validateNutrientDeclarationRules();
   assert(validation.ruleCount === 12, "Devem existir regras para os 12 nutrientes suportados.");
   assert(validation.rangeCount === 6, "As faixas de g e mg devem estar completas e sem sobreposição.");
@@ -88,7 +90,7 @@ async function main() {
   assert(JSON.stringify(rawNutrition) === before, "O formatador não pode alterar a entrada bruta.");
 
   const baseRotula = await prisma.ingredient.count({ where: { source: "BASE_ROTULA" } });
-  assert(baseRotula === 15, "BASE_ROTULA deve permanecer com 15 registros.");
+  await assertBaseRotulaPreserved(baseSnapshot);
 
   console.log(JSON.stringify({
     declarationRules: validation.ruleCount,

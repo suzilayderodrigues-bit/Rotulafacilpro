@@ -1,3 +1,4 @@
+import { snapshotBaseRotula, assertBaseRotulaPreserved } from "./base-rotula-preservation";
 import { prisma } from "@rotula-facil-pro/db";
 import {
   findServingRule,
@@ -12,6 +13,7 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 async function main() {
+  const baseSnapshot = await snapshotBaseRotula();
   const validation = validateRegulatoryServingRules();
 
   assert(validation.groupCount === 8, "O Anexo V deve conter os oito grupos oficiais.");
@@ -55,7 +57,7 @@ async function main() {
   assert(recipeState.unitWeight === 52, "unitWeight deve permanecer intocado.");
 
   const baseRotula = await prisma.ingredient.count({ where: { source: "BASE_ROTULA" } });
-  assert(baseRotula === 15, "BASE_ROTULA deve permanecer com 15 registros.");
+  await assertBaseRotulaPreserved(baseSnapshot);
 
   console.log(JSON.stringify({
     validation,

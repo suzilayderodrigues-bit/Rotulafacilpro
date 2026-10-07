@@ -1,3 +1,4 @@
+import { snapshotBaseRotula, assertBaseRotulaPreserved } from "./base-rotula-preservation";
 import { prisma } from "@rotula-facil-pro/db";
 import {
   calculateRecipeNutrition,
@@ -123,6 +124,7 @@ async function runMathTests() {
 }
 
 async function runRealDataSmoke() {
+  const baseSnapshot = await snapshotBaseRotula();
   const createdUserIds: string[] = [];
   const createdRecipeIds: string[] = [];
 
@@ -130,7 +132,6 @@ async function runRealDataSmoke() {
     const baseRotulaBefore = await prisma.ingredient.count({ where: { source: "BASE_ROTULA" } });
     const baseIngredient = await prisma.ingredient.findFirst({ where: { source: "BASE_ROTULA" }, orderBy: { name: "asc" } });
 
-    assert(baseRotulaBefore === 15, "BASE_ROTULA before should be 15.");
     assert(baseIngredient, "Expected one BASE_ROTULA ingredient.");
 
     const user = await prisma.user.create({
@@ -173,7 +174,7 @@ async function runRealDataSmoke() {
     assert(result.basis === (baseIngredient!.baseUnit === "MILLILITER" ? "100ml" : "100g"), "Real data smoke basis failed.");
 
     const baseRotulaAfter = await prisma.ingredient.count({ where: { source: "BASE_ROTULA" } });
-    assert(baseRotulaAfter === 15, "BASE_ROTULA after should be 15.");
+    await assertBaseRotulaPreserved(baseSnapshot);
 
     return {
       baseRotulaBefore,

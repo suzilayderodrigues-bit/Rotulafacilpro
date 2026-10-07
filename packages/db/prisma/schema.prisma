@@ -146,6 +146,12 @@ enum SubscriptionStatus {
   EXPIRED
 }
 
+enum IngredientAllergenStatus {
+  UNKNOWN
+  KNOWN
+  NONE
+}
+
 model Ingredient {
   id              String             @id @default(cuid())
   name            String
@@ -156,6 +162,7 @@ model Ingredient {
   dataOriginUrl   String?
   sourceCode      String?
   sourceVersion   String?
+  sourceDescription String?
   baseUnit        IngredientBaseUnit @default(GRAM)
   baseQuantity    Decimal            @default(100) @db.Decimal(10, 2)
   caloriesKcal    Decimal?           @db.Decimal(10, 2)
@@ -171,6 +178,7 @@ model Ingredient {
   calciumMg       Decimal?           @db.Decimal(10, 2)
   ironMg          Decimal?           @db.Decimal(10, 2)
   allergens       String[]           @default([])
+  allergenStatus  IngredientAllergenStatus?
   containsGluten  Boolean?
   containsLactose Boolean?
   notes           String?
@@ -185,6 +193,7 @@ model Ingredient {
   @@index([userId])
   @@index([normalizedName])
   @@index([dataOrigin, sourceCode])
+  // BASE_ROTULA identity is enforced by the partial unique index in the expanded-base migration.
   @@map("ingredients")
 }
 

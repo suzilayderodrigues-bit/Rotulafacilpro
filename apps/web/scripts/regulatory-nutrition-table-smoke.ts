@@ -1,3 +1,4 @@
+import { snapshotBaseRotula, assertBaseRotulaPreserved } from "./base-rotula-preservation";
 import { readFileSync } from "node:fs";
 import { prisma } from "@rotula-facil-pro/db";
 import {
@@ -67,6 +68,7 @@ function tableModel(
 }
 
 async function main() {
+  const baseSnapshot = await snapshotBaseRotula();
   const solid = tableModel("100g", 50);
   assert(solid.model.basisLabel === "100 g", "Receita sólida deve usar a coluna 100 g.");
   assert(solid.model.servingLabel === "50 g", "Porção sólida incorreta.");
@@ -126,7 +128,7 @@ async function main() {
   assert(componentSource.includes("overflow-x-auto"), "A tabela deve preservar todas as colunas no mobile.");
 
   const baseRotula = await prisma.ingredient.count({ where: { source: "BASE_ROTULA" } });
-  assert(baseRotula === 15, "BASE_ROTULA deve permanecer com 15 registros.");
+  await assertBaseRotulaPreserved(baseSnapshot);
 
   console.log(JSON.stringify({
     solidBasis: "OK",

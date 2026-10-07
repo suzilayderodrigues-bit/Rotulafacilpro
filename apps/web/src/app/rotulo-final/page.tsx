@@ -114,7 +114,8 @@ export default async function FinalLabelPage({ searchParams }: {
                         </div>
                         <section aria-label="Ingredientes e declarações" className="space-y-2 text-sm leading-6">
                           <p className="break-words font-semibold">{preview.ingredientsText ?? "INGREDIENTES: informação pendente."}</p>
-                          {preview.allergens.length ? <p>ALÉRGICOS: CONTÉM {preview.allergens.join(", ")}.</p> : <p>ALÉRGICOS: nenhum alergênico confirmado; revise os dados da receita.</p>}
+                          {preview.allergens.length ? <p>ALÉRGICOS: CONTÉM {preview.allergens.join(", ")}.</p> : <p>{preview.allergenStatus === "NONE" ? "ALERGÊNICOS: ausência confirmada na revisão." : "ALERGÊNICOS: informação não determinada; revisão necessária."}</p>}
+                          {preview.allergenStatus === "UNKNOWN" && preview.allergens.length > 0 ? <p>Há também informações de alergênicos não determinadas nos ingredientes. Revise antes de exportar.</p> : null}
                           <p>{disclosure(preview.glutenStatus, "GLÚTEN")}</p>
                           <p>{disclosure(preview.lactoseStatus, "LACTOSE")}</p>
                           {preview.crossContaminationRisk === "YES" ? <p>PODE CONTER: {preview.crossContaminationAllergens.join(", ") || "informação pendente"}.</p> : null}
