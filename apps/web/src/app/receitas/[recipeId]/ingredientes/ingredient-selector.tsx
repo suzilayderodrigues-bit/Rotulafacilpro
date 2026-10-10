@@ -7,7 +7,7 @@ import { addRecipeIngredientAction } from "@/lib/recipes/actions";
 
 type Result = { id: string; name: string; category: string; source: string; baseUnit: string };
 
-export function IngredientSelector({ recipeId, addedIds, initialPage }: { recipeId: string; addedIds: string[]; initialPage: { items: Result[]; hasMore: boolean } }) {
+export function IngredientSelector({ recipeId, addedIds, initialPage, customIngredientHref = "/ingredientes?aba=meus&modal=novo" }: { recipeId: string; addedIds: string[]; initialPage: { items: Result[]; hasMore: boolean }; customIngredientHref?: string }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -85,7 +85,7 @@ export function IngredientSelector({ recipeId, addedIds, initialPage }: { recipe
             </li>)}
           </ul>}
         </div>
-        <Link href="/ingredientes?aba=meus&modal=novo" className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold underline">Cadastrar ingrediente próprio</Link>
+        <Link href={customIngredientHref} onClick={customIngredientHref.startsWith("#") ? () => { close(); const section = document.getElementById(customIngredientHref.slice(1)); if (section instanceof HTMLDetailsElement) section.open = true; section?.scrollIntoView({ behavior: "smooth", block: "start" }); } : undefined} className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold underline">Cadastrar ingrediente próprio</Link>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Button type="button" variant="outline" disabled={loading || page === 0} onClick={() => { setPage(page - 1); setLoading(true); }}>Anterior</Button>
           <span className="text-sm">Página {page + 1}</span>

@@ -172,6 +172,22 @@ export async function updateRecipeInformation(userId: string, recipeId: string, 
   });
 }
 
+/** Validate both sections before one atomic update; unrelated saved fields are untouched. */
+export async function updateRecipeProductSetup(userId: string, recipeId: string, yieldInput: RecipeYieldInput, packagingInput: RecipePackagingInput) {
+  const current = await prisma.recipe.findFirst({
+    where: { id: recipeId, userId },
+    include: { _count: { select: { ingredients: true } } }
+  });
+  if (!current) throw new RecipeValidationError("recipe-not-found");
+  if (current._count.ingredients === 0) throw new RecipeValidationError("recipe-has-no-ingredients");
+  const yieldData = validateRecipeYieldInput(yieldInput);
+  const packagingData = validateRecipePackagingInput(packagingInput, current.physicalState);
+  return prisma.recipe.update({
+    where: { id: current.id, userId },
+    data: { ...yieldData, ...packagingData, finalYieldUnit: current.physicalState === "LIQUID" ? "MILLILITER" : "GRAM" }
+  });
+}
+
 export async function updateRecipePackaging(userId: string, recipeId: string, input: RecipePackagingInput) {
   const current = await prisma.recipe.findFirst({
     where: {

@@ -1,17 +1,19 @@
-﻿import Link from "next/link";
-import { ArrowLeft, Check, Circle, Plus } from "lucide-react";
-import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, Input, Label } from "@/components/design-system";
+﻿import { RecipeSteps } from "@/components/layout/recipe-steps";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { Badge, Card, CardDescription, CardHeader, CardTitle, Input, Label } from "@/components/design-system";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { requireUser } from "@/lib/auth/session";
 import { createRecipeProductAction } from "@/lib/recipes/actions";
-import { cn } from "@/lib/utils";
+import { RecipeSubmitButton } from "@/components/layout/recipe-submit-button";
+
 
 type NewRecipePageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-const steps = ["Produto", "Ingredientes", "Rendimento", "Informações"];
+
 
 const errorMessages: Record<string, string> = {
   nome: "Informe o nome do produto.",
@@ -23,38 +25,7 @@ function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function Stepper() {
-  return (
-    <ol className="grid gap-2 sm:grid-cols-4" aria-label="Etapas da receita">
-      {steps.map((step, index) => {
-        const isActive = index === 0;
-        const Icon = isActive ? Check : Circle;
 
-        return (
-          <li
-            key={step}
-            className={cn(
-              "rounded-[var(--radius-md)] border bg-white px-3 py-3 text-sm",
-              isActive ? "border-[#b9e8ef] bg-[#e8f7fa] text-[var(--brand-petrol)]" : "border-[var(--border)] text-[var(--muted)]"
-            )}
-          >
-            <div className="flex items-center gap-2">
-              <span
-                className={cn(
-                  "flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
-                  isActive ? "border-[var(--brand-tiffany)] bg-white text-[var(--brand-petrol)]" : "border-[var(--border)] bg-[var(--surface-muted)]"
-                )}
-              >
-                {isActive ? <Icon className="size-3.5" /> : index + 1}
-              </span>
-              <span className="font-semibold">{step}</span>
-            </div>
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
 
 export default async function NewRecipePage({ searchParams }: NewRecipePageProps) {
   await requireUser();
@@ -81,18 +52,18 @@ export default async function NewRecipePage({ searchParams }: NewRecipePageProps
             <section className="mb-6 rounded-[var(--radius-lg)] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-soft)] sm:p-6">
               <Badge variant="secondary" className="gap-1.5">
                 <span className="size-1.5 rounded-full bg-[var(--accent-orange)]" />
-                Nova receita
+                Minha receita
               </Badge>
               <h1 className="mt-4 text-2xl font-semibold tracking-normal text-[var(--foreground)] sm:text-3xl">
                 Nova receita
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)] sm:text-base">
-                Vamos começar pelas informações básicas do seu produto.
+                Dê um nome à receita para começar. Na mesma etapa, você poderá editar o nome e adicionar os ingredientes e quantidades.
               </p>
             </section>
 
             <div className="mb-6">
-              <Stepper />
+              <RecipeSteps current={1} detail="Nome e ingredientes" />
             </div>
 
             <Card className="shadow-none">
@@ -153,10 +124,7 @@ export default async function NewRecipePage({ searchParams }: NewRecipePageProps
                   >
                     Cancelar
                   </Link>
-                  <Button type="submit" className="sm:min-w-36">
-                    <Plus className="size-4" />
-                    Continuar
-                  </Button>
+                  <RecipeSubmitButton>Salvar e adicionar ingredientes</RecipeSubmitButton>
                 </div>
               </form>
             </Card>

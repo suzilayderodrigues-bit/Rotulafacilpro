@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Plus, Save } from "lucide-react";
-import { Button, Input, Label, Radio, Select, Textarea } from "@/components/design-system";
+import { Input, Label, Radio, Select, Textarea } from "@/components/design-system";
+import { RecipeSubmitButton } from "@/components/layout/recipe-submit-button";
 import { ingredientCategories } from "@/lib/ingredients/categories";
 import {
   createCustomIngredientAction,
@@ -38,19 +39,21 @@ const nutrientFields = [
 
 function SubmitButton({ mode }: { mode: "create" | "edit" }) {
   return (
-    <Button type="submit" className="w-full sm:w-auto">
+    <RecipeSubmitButton>
       {mode === "create" ? <Plus className="size-4" /> : <Save className="size-4" />}
       {mode === "create" ? "Cadastrar ingrediente" : "Salvar alterações"}
-    </Button>
+    </RecipeSubmitButton>
   );
 }
 
 export function CustomIngredientForm({
   mode,
-  initial
+  initial,
+  returnRecipeId
 }: {
   mode: "create" | "edit";
   initial?: CustomIngredientFormInitial;
+  returnRecipeId?: string;
 }) {
   const [baseUnit, setBaseUnit] = useState(initial?.baseUnit ?? "GRAM");
   const [portionMode, setPortionMode] = useState<"per100" | "portion">("per100");
@@ -59,6 +62,7 @@ export function CustomIngredientForm({
 
   return (
     <form action={action} className="space-y-6">
+      {mode === "create" && returnRecipeId ? <input type="hidden" name="returnRecipeId" value={returnRecipeId} /> : null}
       {initial?.id ? <input type="hidden" name="ingredientId" value={initial.id} /> : null}
 
       <section className="space-y-4">

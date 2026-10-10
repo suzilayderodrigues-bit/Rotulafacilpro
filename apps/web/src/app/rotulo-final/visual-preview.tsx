@@ -29,7 +29,7 @@ export function VisualLabelFrame({ preview, format, template }: {
         <section className="space-y-2" aria-label="Ingredientes e declarações da prévia">
           <p className="break-words">{preview.ingredientsText ?? "INGREDIENTES: adicione os ingredientes da receita."}</p>
           {preview.allergens.length > 0 ? <p>ALÉRGICOS: CONTÉM {preview.allergens.join(", ")}.</p> : null}
-          {preview.allergenStatus === "UNKNOWN" ? <p className="font-semibold text-[#8a4b15]">Alergênicos não determinados: revisão obrigatória antes da exportação.</p> : preview.allergenStatus === "NONE" ? <p>ALERGÊNICOS: ausência confirmada na revisão.</p> : null}
+          {preview.allergenStatus === "UNKNOWN" ? <p className="font-semibold text-[#8a4b15]">Alergênicos: informação pendente.</p> : null}
           <p>{disclosure(preview.glutenStatus, "GLÚTEN")}</p>
           <p>{disclosure(preview.lactoseStatus, "LACTOSE")}</p>
           {preview.crossContaminationRisk === "YES" ? <p>PODE CONTER: {preview.crossContaminationAllergens.join(", ") || "confirmação pendente"}.</p> : preview.crossContaminationRisk === "UNKNOWN" || !preview.crossContaminationRisk ? <p>Contaminação cruzada: confirmação pendente.</p> : null}
@@ -41,7 +41,7 @@ export function VisualLabelFrame({ preview, format, template }: {
           {preview.barcode ? <p className="break-all font-mono text-xs">{preview.barcode.value}</p> : null}
           {preview.barcode?.display.status === "READY" ? <img className="mt-2 max-h-28 w-full object-contain" src={`data:image/svg+xml,${encodeURIComponent(preview.barcode.display.svg)}`} alt="Código de barras associado" /> : null}
         </section>
-        {preview.issues.some(issue => issue.severity !== "WARNING") ? <section aria-label="Pendências obrigatórias"><h3 className="font-semibold">Para concluir o rótulo</h3><ul className="list-inside list-disc space-y-1">{preview.issues.filter(issue => issue.severity !== "WARNING").map(issue => <li key={issue.code}>{issue.message}</li>)}</ul></section> : null}
+        {preview.issues.some(issue => issue.severity !== "WARNING") ? <p className="text-sm">Prévia em andamento. Consulte “O que falta para finalizar” antes de imprimir.</p> : null}
       </div>
     </div>
     <p className="mt-2 text-xs text-[var(--muted)]">Prévia com os dados disponíveis, em proporção física {dimensions.widthMm}:{dimensions.heightMm}. Role para consultar todo o conteúdo. Não é o arquivo de impressão; os bloqueios do PDF continuam ativos.</p>

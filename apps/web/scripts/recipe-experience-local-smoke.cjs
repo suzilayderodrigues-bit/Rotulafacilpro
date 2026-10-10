@@ -66,9 +66,11 @@ function hydrate(row) {
     ingredients: items.filter(item => item.recipeId === row.id).map(item => ({ ...item, ingredient: ingredients.find(i => i.id === item.ingredientId) })) } : null;
 }
 const prisma = {
-  ingredient: { findFirst: async ({ where }) => ingredients.find(row => matches(row, where)) ?? null,
+  ingredient: { create: async ({ data }) => { const row = { id: `custom-${ingredients.length}`, ...data }; ingredients.push(row); return row; },
+    findFirst: async ({ where }) => ingredients.find(row => matches(row, where)) ?? null,
     findMany: async ({ where, skip = 0, take = ingredients.length, select }) => ingredients.filter(row => matches(row, where)).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR') || a.id.localeCompare(b.id)).slice(skip, skip + take).map(row => select ? Object.fromEntries(Object.keys(select).map(key => [key, row[key]])) : row) },
   recipe: {
+    findMany: async ({ where }) => recipes.filter(row => matches(row, where)).map(hydrate),
     create: async ({ data }) => { const row = { id: `recipe-${recipes.length}`, netQuantity: null, netQuantityUnit: null, servingSize: null, householdMeasure: null,
       isIndividualPackage: false, servingsPerPackage: null, confirmedAllergens: [], crossContaminationAllergens: [], glutenStatus: null, lactoseStatus: null, crossContaminationRisk: null,
       mainPanelWidthCm: null, mainPanelHeightCm: null, packagingCondition: null, informationReviewedAt: null, ...data }; recipes.push(row); return row; },
@@ -76,6 +78,9 @@ const prisma = {
     update: async ({ where, data }) => { const row = recipes.find(row => matches(row, where)); assert(row); Object.assign(row, data); return hydrate(row); }
   },
   recipeIngredient: {
+    findFirst: async ({ where }) => { const { recipe: ownerFilter, ...rest } = where; const row = items.find(item => matches(item, rest) && recipes.some(recipe => recipe.id === item.recipeId && (!ownerFilter || matches(recipe, ownerFilter)))); return row ? { ...row, ingredient: ingredients.find(i => i.id === row.ingredientId) } : null; },
+    update: async ({ where, data }) => { const row = items.find(item => matches(item, where)); assert(row); Object.assign(row, data); return row; },
+    deleteMany: async ({ where }) => { const { recipe: ownerFilter, ...rest } = where; let count = 0; for (let i = items.length - 1; i >= 0; i--) if (matches(items[i], rest) && recipes.some(recipe => recipe.id === items[i].recipeId && (!ownerFilter || matches(recipe, ownerFilter)))) { items.splice(i, 1); count++; } return { count }; },
     findUnique: async ({ where }) => items.find(row => matches(row, where.recipeId_ingredientId)) ?? null,
     create: async ({ data }) => { const row = { id: `item-${items.length}`, ...data }; items.push(row); return row; }
   },
@@ -83,6 +88,8 @@ const prisma = {
 };
 mocks['@rotula-facil-pro/db'] = { prisma };
 mocks['@/lib/auth/session'] = { requireUser: async () => ({ id: userId }), getCurrentUser: async () => ({ id: userId }) };
+mocks['@/components/layout/topbar'] = { Topbar: () => null };
+mocks['@/components/layout/sidebar'] = { Sidebar: () => null };
 mocks['next/navigation'] = { redirect: url => { throw new Redirect(url); }, useRouter: () => ({ replace() {} }) };
 mocks['next/link'] = { default: ({ children, ...props }) => React.createElement('a', props, children) };
 mocks['./commercial'] = { BarcodeEntitlementError: EntitlementError, createBarcodeWithEntitlement: async (owner, draft, recipeId) => {
@@ -144,7 +151,29 @@ async function main() {
   assert.equal(partial.nutritionTable.configurationRequired, true);
   assert.equal(await compositor.buildFinalLabelPreview(recipe.id, 'other'), null);
   await repo.updateRecipePackaging('owner', recipe.id, { netQuantity: 15, netQuantityUnit: 'GRAM', servingSize: 15, servingUnit: 'GRAM', householdMeasure: '1 unidade' });
-  await action(actions.updateRecipeInformationAction, { recipeId: recipe.id, regulatoryCategory: 'OUTSIDE_ANNEX_XVI', packagingCondition: 'PACKAGED_IN_ABSENCE_OF_CONSUMER', mainPanelWidthCm: 5, mainPanelHeightCm: 17, reviewed: 'on', glutenStatus: 'DOES_NOT_CONTAIN', lactoseStatus: 'DOES_NOT_CONTAIN', crossContaminationRisk: 'NO' });
+  const productData = { recipeId: recipe.id, yieldMode: 'UNITS', unitsProduced: 10, unitWeight: 15, finalYieldAmount: 999, netQuantity: 15, netQuantityUnit: 'GRAM', servingSize: 15, servingUnit: 'GRAM', householdMeasure: '1 unidade' };
+  const beforeInvalid = JSON.stringify(recipe);
+  const invalidProductUrl = await action(actions.updateRecipeProductSetupAction, { ...productData, unitWeight: 20, servingSize: 99 });
+  assert(invalidProductUrl.includes('/rendimento?status=embalagem-porcao'));
+  assert.equal(JSON.stringify(recipe), beforeInvalid, 'Invalid packaging must not partially save yield');
+  const invalidYieldUrl = await action(actions.updateRecipeProductSetupAction, { ...productData, unitsProduced: '1.5' });
+  assert(invalidYieldUrl.includes('/rendimento?status=unidades'));
+  assert.equal(JSON.stringify(recipe), beforeInvalid);
+  assert.equal(await action(actions.updateRecipeProductSetupAction, productData), `/rotulo-final?recipeId=${recipe.id}`);
+  assert.equal(recipe.finalYieldAmount, 150); assert.equal(recipe.netQuantity, 15); assert.equal(recipe.servingSize, 15); assert.equal(recipe.servingsPerPackage, 1);
+  const renameUrl = await action(actions.updateRecipeProductAction, { recipeId: recipe.id, productContext: 'composition', name: 'Produto revisado', foodCategory: 'Teste', physicalState: 'SOLID_OR_SEMISOLID' });
+  assert.equal(renameUrl, `/receitas/${recipe.id}/ingredientes?status=produto-salvo`);
+  assert.equal(recipes.length, 1); assert.equal(recipe.name, 'Produto revisado');
+  await assert.rejects(repo.updateRecipeProductSetup('other', recipe.id, { yieldMode: 'BULK', finalYieldAmount: 500 }, { netQuantity: 15, netQuantityUnit: 'GRAM', servingSize: 15, servingUnit: 'GRAM', householdMeasure: '1 unidade' }), error => error.code === 'recipe-not-found');
+  await action(actions.addRecipeIngredientAction, { recipeId: recipe.id, ingredientId: 'own', amount: 10, unit: 'GRAM' });
+  const ownItem = items.find(item => item.ingredientId === 'own');
+  assert((await action(actions.updateRecipeIngredientAction, { recipeId: recipe.id, recipeIngredientId: ownItem.id, amount: 20, unit: 'GRAM' })).includes('status=atualizado'));
+  assert.equal(ownItem.amount, 20);
+  assert.equal(await repo.updateRecipeIngredient('other', ownItem.id, { amount: 30, unit: 'GRAM' }), null);
+  assert.equal((await repo.removeRecipeIngredient('other', ownItem.id)).count, 0);
+  assert((await action(actions.removeRecipeIngredientAction, { recipeId: recipe.id, recipeIngredientId: ownItem.id })).includes('status=removido'));
+  assert.equal(items.length, 1);
+  assert.equal(await action(actions.updateRecipeInformationAction, { returnTo: 'label', recipeId: recipe.id, regulatoryCategory: 'OUTSIDE_ANNEX_XVI', packagingCondition: 'PACKAGED_IN_ABSENCE_OF_CONSUMER', mainPanelWidthCm: 5, mainPanelHeightCm: 17, reviewed: 'on', glutenStatus: 'DOES_NOT_CONTAIN', lactoseStatus: 'DOES_NOT_CONTAIN', crossContaminationRisk: 'NO' }), `/rotulo-final?recipeId=${recipe.id}`);
   const barcodeActions = load('apps/web/src/lib/barcodes/actions.ts');
   failCreation = true;
   const failedUrl = new URL(await action(barcodeActions.createInternalBarcodeAction, { recipeId: recipe.id }), 'https://example.invalid');
@@ -177,9 +206,9 @@ async function main() {
   assert.equal(unknownNutrient.nutritionTable.rows.find(row => row.nutrient === 'sodiumMg').per100Value, null);
   const frame = load('apps/web/src/app/rotulo-final/visual-preview.tsx').VisualLabelFrame;
   const partialHtml = renderToStaticMarkup(React.createElement(frame, { preview: partial, format: 'CINTA', template: 'ESSENCIAL' }));
-  assert(partialHtml.includes('Maçã') && partialHtml.includes('Valores disponíveis') && partialHtml.includes('Pendências obrigatórias'));
+  assert(partialHtml.includes('Maçã') && partialHtml.includes('Valores disponíveis') && partialHtml.includes('O que falta para finalizar'));
   const html = renderToStaticMarkup(React.createElement(frame, { preview, format: 'CINTA', template: 'CLEAN' }));
-  assert(html.includes('INFORMAÇÃO NUTRICIONAL') && html.includes('Código interno') && html.includes('revisão obrigatória'));
+  assert(html.includes('INFORMAÇÃO NUTRICIONAL') && html.includes('Código interno') && html.includes('informação pendente'));
   assert(!html.includes('overflow-hidden'));
   const bulk = domain.validateRecipeYieldInput({ yieldMode: 'BULK', finalYieldAmount: '1200,50', unitsProduced: 10, unitWeight: 15 });
   assert.equal(bulk.finalYieldAmount, 1200.5); assert.equal(bulk.unitsProduced, null); assert.equal(bulk.unitWeight, null);
@@ -191,6 +220,8 @@ async function main() {
   items.push({ id: 'liquid-item', recipeId: liquid.id, ingredientId: ingredient.id, amount: 200, unit: 'GRAM' });
   await repo.updateRecipeYield('owner', liquid.id, { yieldMode: 'BULK', finalYieldAmount: 300 });
   assert.equal(recipes[1].finalYieldUnit, 'MILLILITER'); assert.equal(recipes[1].unitsProduced, null);
+  assert.equal(await action(actions.updateRecipeProductSetupAction, { ...productData, recipeId: liquid.id, yieldMode: 'BULK', finalYieldAmount: '300,50', netQuantity: 100, netQuantityUnit: 'MILLILITER', servingSize: 50, servingUnit: 'MILLILITER' }), `/rotulo-final?recipeId=${liquid.id}`);
+  assert.equal(liquid.finalYieldAmount, 300.5); assert.equal(liquid.netQuantity, 100); assert.equal(liquid.unitsProduced, null); assert.equal(liquid.unitWeight, null);
   const yieldForm = harness(load('apps/web/src/app/receitas/[recipeId]/rendimento/yield-form.tsx').YieldForm, { recipeId: recipe.id, unitLabel: 'g', finalYieldLabel: 'Peso final', unitWeightLabel: 'Peso de cada unidade', defaultFinalYieldAmount: '150', defaultUnitsProduced: '10', defaultUnitWeight: '15' });
   let tree = yieldForm.render(); assert(!field(tree, 'finalYieldAmount'));
   field(tree, 'unitWeight').props.onChange({ target: { value: '20' } }); tree = yieldForm.render();
@@ -214,6 +245,75 @@ async function main() {
   const barcodeSnapshot = JSON.stringify(barcodes);
   await compositor.buildFinalLabelPreview(recipe.id, 'owner');
   assert.equal(JSON.stringify(barcodes), barcodeSnapshot); assert.equal(used, 1);
+  const composition = harness(load('apps/web/src/app/receitas/[recipeId]/ingredientes/recipe-composition.tsx').RecipeComposition, { recipe: { id: recipe.id, name: recipe.name, foodCategory: recipe.foodCategory, physicalState: recipe.physicalState }, children: 'Ingredients' });
+  tree = composition.render();
+  assert.equal(field(tree, 'name').props.value, recipe.name);
+  assert.equal(field(tree, 'recipeId').props.value, recipe.id);
+  assert.equal(elements(tree).find(e => e.type === 'form').props.action, actions.updateRecipeProductAction);
+  field(tree, 'name').props.onChange({ target: { value: 'Unsaved name' } }); tree = composition.render();
+  let prevented = 0;
+  tree.props.onSubmitCapture({ target: {}, preventDefault() { prevented++; } });
+  tree.props.onClickCapture({ target: { closest: () => ({ getAttribute: () => `/receitas/${recipe.id}/rendimento` }) }, preventDefault() { prevented++; } });
+  assert.equal(prevented, 2, 'Do not discard unsaved identity when adding ingredients or continuing');
+  const packaging = harness(load('apps/web/src/app/receitas/[recipeId]/packaging-form.tsx').PackagingForm, { embedded: true, action: actions.updateRecipeProductSetupAction, recipeId: recipe.id, unit: 'GRAM', unitLabel: 'g', defaultNetQuantity: '15', defaultServingSize: '15', defaultHouseholdMeasure: '1 embalagem', suggestion: { matched: false } });
+  tree = packaging.render(); assert(!elements(tree).some(e => e.type === 'form'), 'Embedded packaging must not nest forms');
+  assert.equal(field(tree, 'servingSize').props.value, '15'); assert.equal(field(tree, 'householdMeasure').props.value, '1 embalagem');
+  const embeddedYield = harness(load('apps/web/src/app/receitas/[recipeId]/rendimento/yield-form.tsx').YieldForm, { embedded: true, recipeId: recipe.id, unitLabel: 'g', finalYieldLabel: 'Peso final', unitWeightLabel: 'Peso de cada unidade', defaultFinalYieldAmount: '150', defaultUnitsProduced: '10', defaultUnitWeight: '15' });
+  assert(!elements(embeddedYield.render()).some(e => e.type === 'form'), 'Embedded yield must not nest forms');
+  const ingredientActions = load('apps/web/src/lib/ingredients/actions.ts');
+  const baseSnapshot = JSON.stringify(ingredients.filter(i => i.source === 'BASE_ROTULA'));
+  const customUrl = await action(ingredientActions.createCustomIngredientAction, { returnRecipeId: recipe.id, name: 'Mamão próprio', category: 'Frutas', baseUnit: 'GRAM', portionMode: 'per100', allergenStatus: 'UNKNOWN', caloriesKcal: '0', sodiumMg: '' });
+  assert.equal(customUrl, `/receitas/${recipe.id}/ingredientes?status=ingrediente-proprio-criado`);
+  const custom = ingredients.at(-1); assert.equal(custom.source, 'CUSTOM'); assert.equal(custom.allergenStatus, 'UNKNOWN'); assert.equal(custom.caloriesKcal, '0'); assert.equal(custom.sodiumMg, null);
+  assert.equal(JSON.stringify(ingredients.filter(i => i.source === 'BASE_ROTULA')), baseSnapshot);
+  const countBeforeDenied = ingredients.length;
+  userId = 'other';
+  assert.equal(await action(ingredientActions.createCustomIngredientAction, { returnRecipeId: recipe.id, name: 'Forbidden', category: 'Frutas' }), '/ingredientes?aba=meus&status=denied');
+  userId = 'owner'; assert.equal(ingredients.length, countBeforeDenied);
+  const productPage = await load('apps/web/src/app/receitas/[recipeId]/rendimento/page.tsx').default({ params: Promise.resolve({ recipeId: recipe.id }) });
+  assert.equal(elements(productPage).filter(e => e.type === 'form' && e.props.action === actions.updateRecipeProductSetupAction).length, 1);
+  const editPage = await load('apps/web/src/app/receitas/[recipeId]/editar/page.tsx').default({ params: Promise.resolve({ recipeId: recipe.id }) });
+  assert(elements(editPage).some(e => e.type === load('apps/web/src/app/receitas/[recipeId]/ingredientes/recipe-composition.tsx').RecipeComposition));
+  assert.equal(recipes.length, 2, 'Reopening/editing pages must not create recipes');
+  const pending = load('apps/web/src/lib/final-label/pending.ts').finalLabelPending;
+  assert(pending(preview).some(issue => issue.code === 'ALLERGENS_REQUIRE_REVIEW' && issue.href.endsWith('#alergenicos')));
+  const incompletePending = pending({ ...partial, glutenStatus: null, lactoseStatus: 'NEEDS_REVIEW', crossContaminationRisk: 'UNKNOWN', issues: [{ code: 'MISSING_REQUIRED_DECLARATION', severity: 'BLOCK', message: 'Review' }] });
+  for (const code of ['GLUTEN_PENDING', 'LACTOSE_PENDING', 'PROCESS_PENDING']) assert(incompletePending.some(issue => issue.code === code));
+  assert(!pending(ready).some(issue => issue.code.endsWith('_PENDING')));
+  const ProcessReview = load('apps/web/src/app/receitas/[recipeId]/informacoes/process-review.tsx').ProcessReview;
+  const processReview = harness(ProcessReview, { defaultRisk: null, defaultAllergens: [] });
+  tree = processReview.render(); assert(!elements(tree).some(e => e.props.name === 'crossContaminationRisk' && e.props.checked));
+  assert(!elements(tree).some(e => e.props.id === 'crossContaminationAllergens'));
+  elements(tree).find(e => e.props.name === 'crossContaminationRisk' && e.props.value === 'YES').props.onChange();
+  tree = processReview.render(); assert(field(tree, 'crossContaminationAllergens').props.required);
+  const oldProcess = harness(ProcessReview, { defaultRisk: 'YES', defaultAllergens: ['LEITE'] });
+  assert.equal(field(oldProcess.render(), 'crossContaminationAllergens').props.defaultValue, 'LEITE');
+  const savedRecipe = JSON.stringify(recipes);
+  const labelPage = await load('apps/web/src/app/rotulo-final/page.tsx').default({ searchParams: Promise.resolve({ recipeId: recipe.id }) });
+  assert(JSON.stringify(labelPage).includes('O que falta para finalizar'));
+  assert(JSON.stringify(labelPage).includes('Resolver esta pendência'));
+  assert.equal(JSON.stringify(recipes), savedRecipe, 'Viewing a label must not change saved recipes');
+  assert.equal(used, 1); assert.equal(barcodes.length, 1);
+  const noneHtml = renderToStaticMarkup(React.createElement(frame, { preview: ready, format: 'CINTA', template: 'ESSENCIAL' }));
+  assert(!noneHtml.includes('ausência confirmada'), 'No automatic allergen absence claim');
+  assert.equal(pdf.assessFinalLabelPdf({ ...ready, status: 'INCOMPLETE' }, 'CINTA').allowed, false);
+  assert.equal(pdf.assessFinalLabelPdf({ ...ready, status: 'REQUIRES_REVIEW' }, 'CINTA').allowed, false);
+  assert.equal(pdf.assessFinalLabelPdf({ ...ready, name: 'Nome extenso '.repeat(300) }, 'CINTA').code, 'CONTENT_OVERFLOW');
+  const regulatory = load('apps/web/src/lib/regulatory/index.ts');
+  for (const [basis, sugar, fat, sodium] of [['100g', 15, 6, 600], ['100ml', 7.5, 3, 300]]) {
+    const atLimit = { ...raw, basis, nutrients: { ...raw.nutrients } };
+    for (const [key, value] of [['addedSugarsG', sugar], ['saturatedFatG', fat], ['sodiumMg', sodium]]) atLimit.nutrients[key] = { ...raw.nutrients[key], per100: value, isComplete: true };
+    assert(Object.values(regulatory.evaluateFrontOfPack(atLimit).nutrients).every(value => value.status === 'HIGH'));
+  }
+  assert.equal(ready.frontOfPack.applicability.status, 'APPLICABLE');
+  const conditional = regulatory.evaluateFrontOfPackApplicability({ regulatoryCategory: 'CHEESE' });
+  assert.equal(conditional.status, 'REQUIRES_REVIEW');
+  const informationPage = await load('apps/web/src/app/receitas/[recipeId]/informacoes/page.tsx').default({ params: Promise.resolve({ recipeId: recipe.id }), searchParams: Promise.resolve({ returnTo: 'label' }) });
+  for (const id of ['gluten', 'lactose']) assert.equal(elements(informationPage).find(e => e.props.id === id).props.open, false, 'Already confirmed data should not demand repeated answers');
+  assert.equal(field(informationPage, 'returnTo').props.value, 'label');
+  assert.equal(JSON.stringify(recipes), savedRecipe);
+  console.log('STAGE 3 OK: progressive preview, actionable specific pending fields, saved recipes unchanged, process risk without default NO, conditional details, UNKNOWN/PDF/overflow preserved; no DB connection.');
+  console.log('STAGE 2 OK: same-recipe identity/composition, edit/remove, atomic yield+packaging validation, liquid/bulk, old edit route, unsaved-data guard, inline CUSTOM return, ownership and UNKNOWN/null/zero; no DB connection.');
   console.log('LOCAL OK: prefix M/MA/accent/clear; bounded alphabetical pages and ownership; create/add/yield/information/packaging/barcode/preview; units and bulk/liquid; controlled selection and failure redirect; UNKNOWN and null/PDF guards; progressive rendered content; no DB connection.');
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

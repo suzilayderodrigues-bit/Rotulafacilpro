@@ -5,6 +5,7 @@ import { Button, Input, Label } from "@/components/design-system";
 import type { ServingSuggestion } from "@/lib/regulatory";
 
 type PackagingFormProps = {
+  embedded?: boolean;
   action: (formData: FormData) => void | Promise<void>;
   recipeId: string;
   unit: "GRAM" | "MILLILITER";
@@ -16,6 +17,7 @@ type PackagingFormProps = {
 };
 
 export function PackagingForm({
+  embedded = false,
   action,
   recipeId,
   unit,
@@ -34,6 +36,27 @@ export function PackagingForm({
     setServingSize(String(suggestion.servingSize).replace(".", ","));
     setHouseholdMeasure(suggestion.householdMeasure);
   }
+
+  const fields = <>
+    <input type="hidden" name="recipeId" value={recipeId} />
+    <input type="hidden" name="netQuantityUnit" value={unit} />
+    <input type="hidden" name="servingUnit" value={unit} />
+    <div className="space-y-2">
+      <Label htmlFor="netQuantity">Quantidade em cada embalagem ({unitLabel})</Label>
+      <Input id="netQuantity" name="netQuantity" inputMode="decimal" defaultValue={defaultNetQuantity} required placeholder="500" />
+      <p className="text-xs leading-5 text-[var(--muted)]">É o conteúdo de uma embalagem, não o rendimento total da receita.</p>
+    </div>
+    <div className="space-y-2">
+      <Label htmlFor="servingSize">Porção para a tabela ({unitLabel})</Label>
+      <Input id="servingSize" name="servingSize" inputMode="decimal" value={servingSize} onChange={event => setServingSize(event.target.value)} required placeholder="50" />
+    </div>
+    <div className="space-y-2">
+      <Label htmlFor="householdMeasure">Como representar essa porção</Label>
+      <Input id="householdMeasure" name="householdMeasure" value={householdMeasure} onChange={event => setHouseholdMeasure(event.target.value)} placeholder="Ex.: 1 unidade" />
+      <p className="text-xs leading-5 text-[var(--muted)]">Medida caseira. Para embalagem individual, o sistema usa “1 embalagem”.</p>
+    </div>
+    {!embedded ? <Button type="submit">Salvar</Button> : null}
+  </>;
 
   return (
     <>
@@ -59,31 +82,7 @@ export function PackagingForm({
         </p>
       )}
 
-      <form action={action} className="grid gap-4 lg:grid-cols-[1fr_1fr_1.2fr_auto] lg:items-end">
-        <input type="hidden" name="recipeId" value={recipeId} />
-        <input type="hidden" name="netQuantityUnit" value={unit} />
-        <input type="hidden" name="servingUnit" value={unit} />
-        <div className="space-y-2">
-          <Label htmlFor="netQuantity">Quantidade líquida da embalagem</Label>
-          <div className="flex overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white focus-within:ring-2 focus-within:ring-[var(--ring)]">
-            <Input id="netQuantity" name="netQuantity" inputMode="decimal" defaultValue={defaultNetQuantity} className="border-0 focus:ring-0" placeholder="500" />
-            <span className="flex items-center border-l border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)]">{unitLabel}</span>
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="servingSize">Porção</Label>
-          <div className="flex overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white focus-within:ring-2 focus-within:ring-[var(--ring)]">
-            <Input id="servingSize" name="servingSize" inputMode="decimal" value={servingSize} onChange={(event) => setServingSize(event.target.value)} className="border-0 focus:ring-0" placeholder="50" />
-            <span className="flex items-center border-l border-[var(--border)] px-3 text-sm font-semibold text-[var(--muted)]">{unitLabel}</span>
-          </div>
-          <p className="text-xs leading-5 text-[var(--muted)]">Esse valor será usado para preparar a tabela nutricional.</p>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="householdMeasure">Medida caseira</Label>
-          <Input id="householdMeasure" name="householdMeasure" value={householdMeasure} onChange={(event) => setHouseholdMeasure(event.target.value)} placeholder="1 unidade" />
-        </div>
-        <Button type="submit">Salvar</Button>
-      </form>
+      {embedded ? <div className="grid gap-4 sm:grid-cols-2">{fields}</div> : <form action={action} className="grid gap-4 lg:grid-cols-[1fr_1fr_1.2fr_auto] lg:items-end">{fields}</form>}
     </>
   );
 }

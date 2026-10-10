@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { type IngredientBaseUnit, type RecipePhysicalState } from "@rotula-facil-pro/db";
 import { requireUser } from "@/lib/auth/session";
 import { RecipeValidationError } from "./domain";
-import { addRecipeIngredient, createRecipe, deleteRecipe, removeRecipeIngredient, updateRecipe, updateRecipeIngredient, updateRecipeInformation, updateRecipePackaging, updateRecipeYield } from "./repository";
+import { addRecipeIngredient, createRecipe, deleteRecipe, removeRecipeIngredient, updateRecipe, updateRecipeIngredient, updateRecipeInformation, updateRecipePackaging, updateRecipeYield, updateRecipeProductSetup } from "./repository";
 
 function formString(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -132,7 +132,9 @@ export async function updateRecipeProductAction(formData: FormData) {
   const user = await requireUser();
   const recipeId = formString(formData, "recipeId");
   const physicalState = recipeType(formString(formData, "physicalState"));
-  if (!recipeId || !physicalState) redirect(`/receitas/${recipeId}/editar?erro=tipo`);
+  const composition = formString(formData, "productContext") === "composition";
+  const failureHref = (error: string) => composition ? recipeIngredientsHref(recipeId, `produto-${error}`) : `/receitas/${recipeId}/editar?erro=${error}`;
+  if (!recipeId || !physicalState) redirect(failureHref("tipo"));
 
   let updated = false;
   try {
@@ -143,10 +145,36 @@ export async function updateRecipeProductAction(formData: FormData) {
       finalYieldUnit: finalYieldUnitForType(physicalState)
     }));
   } catch (error) {
-    redirect(`/receitas/${recipeId}/editar?erro=${productErrorParam(error)}`);
+    redirect(failureHref(productErrorParam(error)));
   }
   if (!updated) redirect("/receitas?erro=receita");
-  redirect(recipeIngredientsHref(recipeId));
+  redirect(recipeIngredientsHref(recipeId, composition ? "produto-salvo" : undefined));
+}
+
+export async function updateRecipeProductSetupAction(formData: FormData) {
+  const user = await requireUser();
+  const recipeId = formString(formData, "recipeId");
+  if (!recipeId) redirect("/receitas?erro=formulario");
+  const netQuantityUnit = ingredientUnit(formString(formData, "netQuantityUnit"));
+  const servingUnit = ingredientUnit(formString(formData, "servingUnit"));
+  if (!netQuantityUnit || !servingUnit) redirect(recipeYieldHref(recipeId, "embalagem-unidade"));
+  try {
+    await updateRecipeProductSetup(user.id, recipeId, {
+      yieldMode: formString(formData, "yieldMode"),
+      finalYieldAmount: formString(formData, "finalYieldAmount"),
+      unitsProduced: formString(formData, "unitsProduced"),
+      unitWeight: formString(formData, "unitWeight")
+    }, {
+      netQuantity: formString(formData, "netQuantity"), netQuantityUnit,
+      servingSize: formString(formData, "servingSize"), servingUnit,
+      householdMeasure: formString(formData, "householdMeasure")
+    });
+  } catch (error) {
+    const packagingCode = packagingErrorParam(error);
+    const status = packagingCode !== "formulario" ? `embalagem-${packagingCode}` : yieldErrorParam(error);
+    redirect(recipeYieldHref(recipeId, status));
+  }
+  redirect("/rotulo-final?recipeId=" + encodeURIComponent(recipeId));
 }
 
 export async function updateRecipeIngredientAction(formData: FormData) {
@@ -263,9 +291,10 @@ export async function updateRecipeInformationAction(formData: FormData) {
       reviewed: formString(formData, "reviewed")
     });
   } catch (error) {
-    redirect("/receitas/" + recipeId + "/informacoes?status=" + informationErrorParam(error));
+    redirect("/receitas/" + recipeId + "/informacoes?status=" + informationErrorParam(error) + (formString(formData, "returnTo") === "label" ? "&returnTo=label" : ""));
   }
 
+  if (formString(formData, "returnTo") === "label") redirect("/rotulo-final?recipeId=" + encodeURIComponent(recipeId));
   redirect("/receitas/" + recipeId);
 }
 

@@ -7,6 +7,7 @@ import { validateRecipeYieldInput } from "@/lib/recipes/domain";
 import { updateRecipeYieldAction } from "@/lib/recipes/actions";
 
 type YieldFormProps = {
+  embedded?: boolean;
   recipeId: string;
   unitLabel: "g" | "ml";
   finalYieldLabel: string;
@@ -26,7 +27,7 @@ export function YieldForm(props: YieldFormProps) {
     total = validateRecipeYieldInput({ yieldMode: mode, unitsProduced, unitWeight, finalYieldAmount }).finalYieldAmount;
   } catch { /* Incomplete input has no invented total. */ }
 
-  return <form action={updateRecipeYieldAction} className="space-y-5">
+  const fields = <>
     <input type="hidden" name="recipeId" value={props.recipeId} />
     <Label htmlFor="yieldMode">Como o produto é vendido?</Label>
     <select id="yieldMode" name="yieldMode" value={mode} onChange={event => setMode(event.target.value)} className="h-12 w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-white px-3">
@@ -41,7 +42,8 @@ export function YieldForm(props: YieldFormProps) {
     </div>
     <p className="text-sm text-[var(--muted)]">Use somente o peso ou volume do produto pronto, depois do preparo; não o da massa crua.</p>
     <p role="status" className="rounded-[var(--radius-md)] bg-[var(--surface-muted)] p-3 text-sm font-semibold">Rendimento final total: {total === null ? "preencha os campos acima" : `${total.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} ${props.unitLabel}`}{mode === "UNITS" && total !== null ? " — calculado automaticamente" : ""}.</p>
-    <div className="flex justify-end border-t border-[var(--border)] pt-5"><Button type="submit">Continuar<ArrowRight className="size-4" /></Button></div>
-  </form>;
+    {!props.embedded ? <div className="flex justify-end border-t border-[var(--border)] pt-5"><Button type="submit">Continuar para revisão do produto<ArrowRight className="size-4" /></Button></div> : null}
+  </>;
+  return props.embedded ? <div className="space-y-5">{fields}</div> : <form action={updateRecipeYieldAction} className="space-y-5">{fields}</form>;
 }
 

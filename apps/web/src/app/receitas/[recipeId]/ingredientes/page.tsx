@@ -1,5 +1,6 @@
-﻿import Link from "next/link";
-import { Check, Circle, Trash2 } from "lucide-react";
+﻿import { RecipeSteps } from "@/components/layout/recipe-steps";
+import Link from "next/link";
+import { Trash2 } from "lucide-react";
 import {
   Badge,
   Button,
@@ -20,6 +21,8 @@ import { IngredientSelector } from "./ingredient-selector";
 import { searchAccessibleIngredients } from "@/lib/ingredients/repository";
 import { findRecipe } from "@/lib/recipes/repository";
 import { cn } from "@/lib/utils";
+import { RecipeComposition } from "./recipe-composition";
+import { CustomIngredientForm } from "@/app/ingredientes/_components/custom-ingredient-form";
 
 type RecipeIngredientsStepPageProps = {
   params: Promise<{ recipeId: string }>;
@@ -28,9 +31,15 @@ type RecipeIngredientsStepPageProps = {
 
 type RecipeItem = NonNullable<Awaited<ReturnType<typeof findRecipe>>>["ingredients"][number];
 
-const steps = ["Produto", "Ingredientes", "Rendimento", "Informações"];
+
 
 const statusMessages: Record<string, string> = {
+  "produto-salvo": "Dados da receita salvos. Continue adicionando ingredientes aqui.",
+  "produto-nome": "Informe o nome do produto.",
+  "produto-tipo": "Selecione sólido/semissólido ou líquido.",
+  "produto-formulario": "Não foi possível salvar os dados da receita. Revise e tente novamente.",
+  "ingrediente-proprio-criado": "Ingrediente próprio cadastrado. Busque pelo nome e informe a quantidade para adicioná-lo.",
+  "ingrediente-proprio-invalido": "Revise os dados do ingrediente próprio e tente novamente.",
   adicionado: "Ingrediente adicionado à receita.",
   atualizado: "Quantidade atualizada.",
   removido: "Ingrediente removido da receita.",
@@ -59,38 +68,7 @@ function sourceLabel(source: string) {
   return source === "CUSTOM" ? "Meu ingrediente" : "Base Rotula";
 }
 
-function Stepper() {
-  return (
-    <ol className="grid gap-2 sm:grid-cols-4" aria-label="Etapas da receita">
-      {steps.map((step, index) => {
-        const isDone = index === 0;
-        const isActive = index === 1;
 
-        return (
-          <li
-            key={step}
-            className={cn(
-              "rounded-[var(--radius-md)] border bg-white px-3 py-3 text-sm",
-              isActive || isDone ? "border-[#b9e8ef] bg-[#e8f7fa] text-[var(--brand-petrol)]" : "border-[var(--border)] text-[var(--muted)]"
-            )}
-          >
-            <div className="flex items-center gap-2">
-              <span
-                className={cn(
-                  "flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
-                  isActive || isDone ? "border-[var(--brand-tiffany)] bg-white text-[var(--brand-petrol)]" : "border-[var(--border)] bg-[var(--surface-muted)]"
-                )}
-              >
-                {isDone ? <Check className="size-3.5" /> : isActive ? "2" : <Circle className="size-3" />}
-              </span>
-              <span className="font-semibold">{step}</span>
-            </div>
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
 
 function RecipeIngredientRow({ item, recipeId }: { item: RecipeItem; recipeId: string }) {
   return (
@@ -165,29 +143,29 @@ export default async function RecipeIngredientsStepPage({ params, searchParams }
         <div className="min-w-0 flex-1">
           <div className="mx-auto w-full max-w-6xl px-5 py-6 lg:px-8 lg:py-8">
             <div className="mb-5">
-              <Link href={`/receitas/${recipe.id}/editar`} className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand-petrol)] hover:text-[var(--accent-orange)]">
-                Voltar aos dados do produto
+              <Link href="/receitas" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--brand-petrol)] hover:text-[var(--accent-orange)]">
+                Voltar para receitas
               </Link>
             </div>
 
             <section className="mb-6 rounded-[var(--radius-lg)] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-soft)] sm:p-6">
               <Badge variant="secondary" className="gap-1.5">
                 <span className="size-1.5 rounded-full bg-[var(--accent-orange)]" />
-                Ingredientes
+                Minha receita
               </Badge>
-              <h1 className="mt-4 text-2xl font-semibold tracking-normal text-[var(--foreground)] sm:text-3xl">Ingredientes</h1>
+              <h1 className="mt-4 text-2xl font-semibold tracking-normal text-[var(--foreground)] sm:text-3xl">Minha receita</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)] sm:text-base">
                 Adicione os ingredientes e informe quanto você usa nesta receita.
               </p>
               <p className="mt-3 text-sm font-semibold text-[var(--brand-petrol)]">{recipe.name}</p>
             </section>
 
-            <div className="mb-6"><Stepper /></div>
-
             {status ? (
-              <Toast className={cn("mb-5", !["adicionado", "removido", "atualizado"].includes(status) && "border-[#f0c4c0]")}>{statusMessages[status] ?? statusMessages.formulario}</Toast>
+              <Toast className={cn("mb-5", !["adicionado", "removido", "atualizado", "produto-salvo", "ingrediente-proprio-criado"].includes(status) && "border-[#f0c4c0]")}>{statusMessages[status] ?? statusMessages.formulario}</Toast>
             ) : null}
 
+            <RecipeComposition key={JSON.stringify([recipe.id, recipe.name, recipe.foodCategory, recipe.physicalState])} recipe={{ id: recipe.id, name: recipe.name, foodCategory: recipe.foodCategory, physicalState: recipe.physicalState }}>
+            <RecipeSteps current={1} recipeId={recipe.id} detail="Nome, ingredientes e quantidades" />
             <div className="grid gap-6">
               <Card className="shadow-none">
                 <CardHeader className="flex-col gap-3">
@@ -197,7 +175,12 @@ export default async function RecipeIngredientsStepPage({ params, searchParams }
                   </div>
                 </CardHeader>
 
-                <IngredientSelector recipeId={recipe.id} addedIds={recipe.ingredients.map((item) => item.ingredientId)} initialPage={await searchAccessibleIngredients(user.id, "", 0)} />
+                <IngredientSelector recipeId={recipe.id} customIngredientHref="#ingrediente-proprio" addedIds={recipe.ingredients.map((item) => item.ingredientId)} initialPage={await searchAccessibleIngredients(user.id, "", 0)} />
+                <details id="ingrediente-proprio" open={status === "ingrediente-proprio-invalido"} className="mt-5 rounded-md border p-3">
+                  <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold">Cadastrar ingrediente próprio nesta receita</summary>
+                  <p className="my-3 text-sm text-[var(--muted)]">Copie os dados da embalagem. Depois de cadastrar, selecione o ingrediente e informe quanto usou.</p>
+                  <CustomIngredientForm mode="create" returnRecipeId={recipe.id} />
+                </details>
               </Card>
 
               <Card className="shadow-none">
@@ -222,14 +205,15 @@ export default async function RecipeIngredientsStepPage({ params, searchParams }
                 <div className="mt-5 border-t border-[var(--border)] pt-5">
                   {canContinue ? (
                     <Link href={"/receitas/" + recipe.id + "/rendimento"} className="inline-flex h-10 w-full items-center justify-center rounded-[var(--radius-md)] border border-[var(--brand-tiffany)] bg-[var(--brand-tiffany)] px-4 text-sm font-semibold text-[var(--brand-navy)] transition hover:bg-[#1294a5]">
-                      Continuar
+                      Continuar para Meu produto
                     </Link>
                   ) : (
-                    <Button type="button" className="w-full" disabled>Continuar</Button>
+                    <Button type="button" className="w-full" disabled>Continuar para Meu produto</Button>
                   )}
                 </div>
               </Card>
             </div>
+            </RecipeComposition>
           </div>
         </div>
       </div>

@@ -1,21 +1,30 @@
+import { RecipeSteps } from "@/components/layout/recipe-steps";
 import Link from "next/link";
-import { ArrowLeft, Check, Circle, Scale } from "lucide-react";
+import { ArrowLeft, Scale } from "lucide-react";
 import { Badge, Card, CardDescription, CardHeader, CardTitle, EmptyState, Toast } from "@/components/design-system";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { requireUser } from "@/lib/auth/session";
 import { findRecipe } from "@/lib/recipes/repository";
-import { cn } from "@/lib/utils";
+
 import { YieldForm } from "./yield-form";
+import { PackagingForm } from "../packaging-form";
+import { getServingSuggestion } from "@/lib/regulatory";
+import { updateRecipeProductSetupAction } from "@/lib/recipes/actions";
+import { RecipeSubmitButton } from "@/components/layout/recipe-submit-button";
 
 type RecipeYieldStepPageProps = {
   params: Promise<{ recipeId: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-const steps = ["Produto", "Ingredientes", "Rendimento", "Informações"];
+
 
 const statusMessages: Record<string, string> = {
+  "embalagem-quantidade-liquida": "Informe a quantidade contida em cada embalagem.",
+  "embalagem-porcao": "Informe uma porção válida, sem ultrapassar o conteúdo da embalagem.",
+  "embalagem-medida-caseira": "Informe como representar a porção, por exemplo: 1 unidade.",
+  "embalagem-unidade": "Revise as unidades de peso ou volume da embalagem.",
   rendimento: "Informe um rendimento final maior que zero.",
   unidades: "Informe a quantidade de unidades como número inteiro maior que zero.",
   "peso-unidade": "Informe o peso ou volume por unidade maior que zero.",
@@ -54,38 +63,7 @@ function formatDecimal(value: unknown) {
   return Number.isInteger(numberValue) ? String(numberValue) : numberValue.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 }
 
-function Stepper() {
-  return (
-    <ol className="grid gap-2 sm:grid-cols-4" aria-label="Etapas da receita">
-      {steps.map((step, index) => {
-        const isDone = index < 2;
-        const isActive = index === 2;
 
-        return (
-          <li
-            key={step}
-            className={cn(
-              "rounded-[var(--radius-md)] border bg-white px-3 py-3 text-sm",
-              isActive || isDone ? "border-[#b9e8ef] bg-[#e8f7fa] text-[var(--brand-petrol)]" : "border-[var(--border)] text-[var(--muted)]"
-            )}
-          >
-            <div className="flex items-center gap-2">
-              <span
-                className={cn(
-                  "flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
-                  isActive || isDone ? "border-[var(--brand-tiffany)] bg-white text-[var(--brand-petrol)]" : "border-[var(--border)] bg-[var(--surface-muted)]"
-                )}
-              >
-                {isDone ? <Check className="size-3.5" /> : isActive ? "3" : <Circle className="size-3" />}
-              </span>
-              <span className="font-semibold">{step}</span>
-            </div>
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
 
 export default async function RecipeYieldStepPage({ params, searchParams }: RecipeYieldStepPageProps) {
   const user = await requireUser();
@@ -131,23 +109,23 @@ export default async function RecipeYieldStepPage({ params, searchParams }: Reci
             <div className="mb-5">
               <Link href={"/receitas/" + recipe.id + "/ingredientes"} className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand-petrol)] hover:text-[var(--accent-orange)]">
                 <ArrowLeft className="size-4" />
-                Voltar para ingredientes
+                Voltar para Minha receita
               </Link>
             </div>
 
             <section className="mb-6 rounded-[var(--radius-lg)] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-soft)] sm:p-6">
               <Badge variant="secondary" className="gap-1.5">
                 <span className="size-1.5 rounded-full bg-[var(--accent-orange)]" />
-                Rendimento
+                Meu produto
               </Badge>
-              <h1 className="mt-4 text-2xl font-semibold tracking-normal text-[var(--foreground)] sm:text-3xl">Rendimento</h1>
+              <h1 className="mt-4 text-2xl font-semibold tracking-normal text-[var(--foreground)] sm:text-3xl">Meu produto</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)] sm:text-base">
-                Informe quanto a receita rende depois de pronta.
+                Informe quanto a receita rende depois de pronta e quanto vai em cada embalagem.
               </p>
               <p className="mt-3 text-sm font-semibold text-[var(--brand-petrol)]">{recipe.name}</p>
             </section>
 
-            <div className="mb-6"><Stepper /></div>
+            <div className="mb-6"><RecipeSteps current={2} recipeId={recipe.id} detail="Rendimento e embalagem" /></div>
 
             {status ? (
               <Toast className="mb-5 border-[#f0c4c0]">{statusMessages[status] ?? statusMessages.formulario}</Toast>
@@ -165,10 +143,11 @@ export default async function RecipeYieldStepPage({ params, searchParams }: Reci
                   </div>
                 </CardHeader>
                 <Link href={"/receitas/" + recipe.id + "/ingredientes"} className="inline-flex h-10 w-full items-center justify-center rounded-[var(--radius-md)] border border-[var(--brand-tiffany)] bg-[var(--brand-tiffany)] px-4 text-sm font-semibold text-[var(--brand-navy)] transition hover:bg-[#1294a5] sm:w-auto">
-                  Voltar para ingredientes
+                  Voltar para Minha receita
                 </Link>
               </Card>
             ) : (
+              <form action={updateRecipeProductSetupAction} className="space-y-5">
               <Card className="shadow-none">
                 <CardHeader className="flex-col">
                   <div className="flex size-10 items-center justify-center rounded-[var(--radius-md)] bg-[#e8f7fa] text-[var(--brand-petrol)]">
@@ -183,6 +162,7 @@ export default async function RecipeYieldStepPage({ params, searchParams }: Reci
                 </CardHeader>
 
                 <YieldForm
+                  embedded
                   recipeId={recipe.id}
                   unitLabel={unit}
                   finalYieldLabel={finalYieldLabel(recipe.physicalState)}
@@ -192,6 +172,15 @@ export default async function RecipeYieldStepPage({ params, searchParams }: Reci
                   defaultUnitWeight={formatDecimal(recipe.unitWeight)}
                 />
               </Card>
+              <Card className="shadow-none">
+                <CardHeader className="flex-col"><CardTitle>Conteúdo de cada embalagem</CardTitle><CardDescription>O rendimento é o total preparado. A embalagem é a quantidade que você entrega ao cliente.</CardDescription></CardHeader>
+                <PackagingForm embedded action={updateRecipeProductSetupAction} recipeId={recipe.id}
+                  unit={recipe.physicalState === "LIQUID" ? "MILLILITER" : "GRAM"} unitLabel={unit}
+                  defaultNetQuantity={formatDecimal(recipe.netQuantity)} defaultServingSize={formatDecimal(recipe.servingSize)}
+                  defaultHouseholdMeasure={recipe.householdMeasure ?? ""} suggestion={getServingSuggestion(recipe.foodCategory, recipe.physicalState)} />
+              </Card>
+              <div className="flex justify-end"><RecipeSubmitButton>Salvar e ver meu rótulo</RecipeSubmitButton></div>
+              </form>
             )}
           </div>
         </div>

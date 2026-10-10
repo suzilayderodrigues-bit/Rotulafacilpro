@@ -1,5 +1,6 @@
+import { RecipeSteps } from "@/components/layout/recipe-steps";
 import Link from "next/link";
-import { ArrowLeft, Check, Circle, ClipboardList } from "lucide-react";
+import { ArrowLeft, ClipboardList } from "lucide-react";
 import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, EmptyState, Input, Label, Toast } from "@/components/design-system";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
@@ -7,16 +8,18 @@ import { requireUser } from "@/lib/auth/session";
 import { resolveIngredientAllergenState } from "@rotula-facil-pro/db/allergens";
 import { updateRecipeInformationAction } from "@/lib/recipes/actions";
 import { findRecipe } from "@/lib/recipes/repository";
-import { cn } from "@/lib/utils";
+import { conditionalAnnexXviCategories } from "@/lib/regulatory";
+
 import { RegulatoryCategoryFields } from "./regulatory-category-fields";
 import { RegulatoryPackagingFields } from "./regulatory-packaging-fields";
+import { ProcessReview } from "./process-review";
 
 type RecipeInformationStepPageProps = {
   params: Promise<{ recipeId: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-const steps = ["Produto", "Ingredientes", "Rendimento", "Finalizar"];
+
 
 const statusMessages: Record<string, string> = {
   revisao: "Confirme que revisou as informações do produto antes de concluir.",
@@ -39,11 +42,6 @@ const lactoseOptions = [
   ["NEEDS_REVIEW", "Preciso revisar"]
 ] as const;
 
-const crossContaminationOptions = [
-  ["YES", "Sim"],
-  ["NO", "Não"],
-  ["UNKNOWN", "Não sei"]
-] as const;
 
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -54,38 +52,7 @@ function cleanParam(value: string | string[] | undefined) {
   return parsed ? parsed : undefined;
 }
 
-function Stepper() {
-  return (
-    <ol className="grid gap-2 sm:grid-cols-4" aria-label="Etapas da receita">
-      {steps.map((step, index) => {
-        const isDone = index < 3;
-        const isActive = index === 3;
 
-        return (
-          <li
-            key={step}
-            className={cn(
-              "rounded-[var(--radius-md)] border bg-white px-3 py-3 text-sm",
-              isActive || isDone ? "border-[#b9e8ef] bg-[#e8f7fa] text-[var(--brand-petrol)]" : "border-[var(--border)] text-[var(--muted)]"
-            )}
-          >
-            <div className="flex items-center gap-2">
-              <span
-                className={cn(
-                  "flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
-                  isActive || isDone ? "border-[var(--brand-tiffany)] bg-white text-[var(--brand-petrol)]" : "border-[var(--border)] bg-[var(--surface-muted)]"
-                )}
-              >
-                {isDone ? <Check className="size-3.5" /> : isActive ? "4" : <Circle className="size-3" />}
-              </span>
-              <span className="font-semibold">{step}</span>
-            </div>
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
 
 function uniqueSorted(values: string[]) {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, "pt-BR"));
@@ -95,9 +62,6 @@ function statusDefault(value: string | null | undefined) {
   return value ?? "NEEDS_REVIEW";
 }
 
-function crossDefault(value: string | null | undefined) {
-  return value ?? "UNKNOWN";
-}
 
 export default async function RecipeInformationStepPage({ params, searchParams }: RecipeInformationStepPageProps) {
   const user = await requireUser();
@@ -152,29 +116,32 @@ export default async function RecipeInformationStepPage({ params, searchParams }
             <div className="mb-5">
               <Link href={"/receitas/" + recipe.id + "/rendimento"} className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand-petrol)] hover:text-[var(--accent-orange)]">
                 <ArrowLeft className="size-4" />
-                Voltar para rendimento
+                Voltar ao rendimento do Meu produto
               </Link>
             </div>
 
             <section className="mb-6 rounded-[var(--radius-lg)] border border-[var(--border)] bg-white p-5 shadow-[var(--shadow-soft)] sm:p-6">
               <Badge variant="secondary" className="gap-1.5">
                 <span className="size-1.5 rounded-full bg-[var(--accent-orange)]" />
-                Finalizar
+                Meu rótulo
               </Badge>
-              <h1 className="mt-4 text-2xl font-semibold tracking-normal text-[var(--foreground)] sm:text-3xl">Finalizar</h1>
+              <h1 className="mt-4 text-2xl font-semibold tracking-normal text-[var(--foreground)] sm:text-3xl">Completar meu rótulo</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)] sm:text-base">
                 Revise as informações importantes do seu produto antes de continuar.
               </p>
               <p className="mt-3 text-sm font-semibold text-[var(--brand-petrol)]">{recipe.name}</p>
             </section>
 
-            <div className="mb-6"><Stepper /></div>
+            <div className="mb-6"><RecipeSteps current={3} recipeId={recipe.id} detail="Resolver informações pendentes" /></div>
 
             {status ? <Toast className="mb-5 border-[#f0c4c0]">{statusMessages[status] ?? statusMessages.formulario}</Toast> : null}
 
             <form action={updateRecipeInformationAction} className="space-y-5">
               <input type="hidden" name="recipeId" value={recipe.id} />
+              <input type="hidden" name="returnTo" value={query.returnTo === "label" ? "label" : ""} />
 
+              <details id="enquadramento" open={!recipe.regulatoryCategory || !recipe.packagingCondition || (recipe.packagingCondition === "PACKAGED_IN_ABSENCE_OF_CONSUMER" && (!recipe.mainPanelWidthCm || !recipe.mainPanelHeightCm)) || (conditionalAnnexXviCategories.includes(recipe.regulatoryCategory) && [recipe.addedSugarsAddition, recipe.saturatedFatAddition, recipe.sodiumAddition].some(value => !value || value === "UNKNOWN"))} className="rounded border bg-white p-3">
+              <summary className="cursor-pointer text-sm font-semibold">Tipo de produto e embalagem · conferir ou editar</summary>
               <RegulatoryCategoryFields
                 defaultCategory={recipe.regulatoryCategory}
                 defaultAddedSugarsAddition={recipe.addedSugarsAddition}
@@ -187,7 +154,10 @@ export default async function RecipeInformationStepPage({ params, searchParams }
                 defaultWidthCm={recipe.mainPanelWidthCm?.toString() ?? ""}
                 defaultHeightCm={recipe.mainPanelHeightCm?.toString() ?? ""}
               />
+              </details>
 
+              <details id="alergenicos" open={hasUnknownAllergens || !recipe.informationReviewedAt || allergenSuggestions.some(value => !recipe.confirmedAllergens.includes(value))} className="rounded border bg-white p-3">
+              <summary className="cursor-pointer text-sm font-semibold">Alergênicos · {hasUnknownAllergens ? "há ingredientes com informação desconhecida" : "conferir declarações"}</summary>
               <Card className="shadow-none">
                 <CardHeader className="flex-col">
                   <div className="flex size-10 items-center justify-center rounded-[var(--radius-md)] bg-[#e8f7fa] text-[var(--brand-petrol)]">
@@ -218,6 +188,7 @@ export default async function RecipeInformationStepPage({ params, searchParams }
                 {hasUnknownAllergens ? (
                   <div className="mt-4 rounded-[var(--radius-md)] border border-[#f4d5b6] bg-[#fff8f0] px-4 py-3 text-sm text-[#8a4b15]">
                     Alguns ingredientes têm alergênicos não determinados. Isso não significa ausência. O PDF do rótulo ficará bloqueado para revisão enquanto essa informação estiver desconhecida.
+                    <ul className="mt-2 space-y-2">{recipe.ingredients.filter(item => resolveIngredientAllergenState(item.ingredient) === "UNKNOWN").map(item => <li key={item.id}>{item.ingredient.name}{item.ingredient.source === "CUSTOM" ? <Link href={`/ingredientes?aba=meus&modal=editar&ingredientId=${encodeURIComponent(item.ingredient.id)}`} className="ml-2 underline">Completar ingrediente próprio</Link> : <span> — confira a fonte ou substitua por um ingrediente próprio com informações verificadas.</span>}</li>)}</ul>
                   </div>
                 ) : null}
 
@@ -227,6 +198,9 @@ export default async function RecipeInformationStepPage({ params, searchParams }
                 </div>
               </Card>
 
+              </details>
+              <details id="gluten" open={!recipe.glutenStatus || recipe.glutenStatus === "NEEDS_REVIEW"} className="rounded border bg-white p-3">
+              <summary className="cursor-pointer text-sm font-semibold">Glúten · {recipe.glutenStatus === "CONTAINS" ? "contém, já confirmado" : recipe.glutenStatus === "DOES_NOT_CONTAIN" ? "declaração já confirmada" : "confirmar informação"}</summary>
               <Card className="shadow-none">
                 <CardHeader className="flex-col">
                   <div>
@@ -249,6 +223,9 @@ export default async function RecipeInformationStepPage({ params, searchParams }
                 </div>
               </Card>
 
+              </details>
+              <details id="lactose" open={!recipe.lactoseStatus || recipe.lactoseStatus === "NEEDS_REVIEW"} className="rounded border bg-white p-3">
+              <summary className="cursor-pointer text-sm font-semibold">Lactose · {recipe.lactoseStatus === "CONTAINS" ? "contém, já confirmado" : recipe.lactoseStatus === "DOES_NOT_CONTAIN" ? "declaração já confirmada" : "confirmar informação"}</summary>
               <Card className="shadow-none">
                 <CardHeader className="flex-col">
                   <div>
@@ -271,27 +248,8 @@ export default async function RecipeInformationStepPage({ params, searchParams }
                 </div>
               </Card>
 
-              <Card className="shadow-none">
-                <CardHeader className="flex-col">
-                  <div>
-                    <CardTitle>Contaminação cruzada</CardTitle>
-                    <CardDescription>Essa informação deve ser declarada por você, de acordo com sua produção.</CardDescription>
-                  </div>
-                </CardHeader>
-                <p className="mb-3 text-sm font-semibold text-[var(--foreground)]">Existe risco de contaminação cruzada durante a produção?</p>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  {crossContaminationOptions.map(([value, label]) => (
-                    <label key={value} className="flex min-h-12 items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--foreground)]">
-                      <input type="radio" name="crossContaminationRisk" value={value} defaultChecked={crossDefault(recipe.crossContaminationRisk) === value} required className="size-4 accent-[var(--brand-tiffany)]" />
-                      {label}
-                    </label>
-                  ))}
-                </div>
-                <div className="mt-4">
-                  <Label htmlFor="crossContaminationAllergens">Se sim, quais alergênicos estão envolvidos?</Label>
-                  <Input id="crossContaminationAllergens" name="crossContaminationAllergens" defaultValue={recipe.crossContaminationAllergens.join(", ")} placeholder="Ex.: leite, soja, castanhas..." />
-                </div>
-              </Card>
+              </details>
+              <ProcessReview defaultRisk={recipe.crossContaminationRisk} defaultAllergens={recipe.crossContaminationAllergens} />
 
               <Card className="shadow-none">
                 <label className="flex items-start gap-3 text-sm font-semibold text-[var(--foreground)]">
@@ -300,10 +258,10 @@ export default async function RecipeInformationStepPage({ params, searchParams }
                 </label>
 
                 <div className="mt-5 flex flex-col gap-3 border-t border-[var(--border)] pt-5 sm:flex-row sm:justify-between">
-                  <Link href={"/receitas/" + recipe.id + "/rendimento"} className="inline-flex h-10 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white px-4 text-sm font-semibold text-[var(--brand-petrol)] transition hover:bg-[var(--surface-muted)]">
+                  <Link href={query.returnTo === "label" ? `/rotulo-final?recipeId=${encodeURIComponent(recipe.id)}` : "/receitas/" + recipe.id + "/rendimento"} className="inline-flex h-10 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white px-4 text-sm font-semibold text-[var(--brand-petrol)] transition hover:bg-[var(--surface-muted)]">
                     Voltar
                   </Link>
-                  <Button type="submit" className="sm:min-w-40">Concluir receita</Button>
+                  <Button type="submit" className="sm:min-w-40">{query.returnTo === "label" ? "Salvar e atualizar meu rótulo" : "Salvar revisão e ver resumo"}</Button>
                 </div>
               </Card>
             </form>

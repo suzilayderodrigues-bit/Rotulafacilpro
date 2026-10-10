@@ -1,3 +1,4 @@
+import { RecipeSteps } from "@/components/layout/recipe-steps";
 import Link from "next/link";
 import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, EmptyState, Label } from "@/components/design-system";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -6,6 +7,7 @@ import { NutritionFactsTable } from "@/components/nutrition/nutrition-facts-tabl
 import { FrontOfPackNutritionPreview } from "@/components/nutrition/front-of-pack-nutrition-preview";
 import { requireUser } from "@/lib/auth/session";
 import { buildFinalLabelPreview } from "@/lib/final-label/preview";
+import { finalLabelPending } from "@/lib/final-label/pending";
 import { prepareFinalLabelProduction } from "@/lib/final-label/production";
 import { assessLabelLayout, labelFormats, labelPreviewHref, labelTemplates, resolveLabelFormat, resolveLabelTemplate } from "@/lib/final-label/visual";
 import { listRecipes } from "@/lib/recipes/repository";
@@ -47,10 +49,11 @@ export default async function FinalLabelPage({ searchParams }: {
           <div className="mx-auto w-full max-w-7xl space-y-5 px-5 py-6 lg:px-8 lg:py-8">
             <section className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-white p-5 sm:p-6">
               <Badge variant="secondary">Rótulo Final</Badge>
-              <h1 className="mt-4 text-2xl font-semibold sm:text-3xl">Rótulo Final</h1>
+              <h1 className="mt-4 text-2xl font-semibold sm:text-3xl">Meu rótulo</h1>
               <p className="mt-2 text-sm text-[var(--muted)]">Veja como as informações do seu produto serão organizadas no rótulo e baixe o PDF quando todos os dados estiverem prontos.</p>
             </section>
 
+            {preview ? <><RecipeSteps current={3} recipeId={preview.recipeId} detail="Prévia e impressão" /><Link href={`/receitas/${preview.recipeId}/rendimento`} className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--brand-petrol)]">Voltar para Meu produto</Link><Link href={`/receitas/${preview.recipeId}/informacoes`} className="ml-4 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--brand-petrol)]">Revisar declarações do produto</Link></> : null}
             {recipes.length === 0 ? (
               <EmptyState title="Crie sua primeira receita para montar um rótulo." description="Depois de cadastrar ingredientes e rendimento, você poderá visualizar uma prévia técnica." action={<Link href="/receitas/nova" className="inline-flex h-10 items-center rounded-[var(--radius-md)] bg-[var(--brand-tiffany)] px-4 font-semibold text-[var(--brand-navy)]">Criar receita</Link>} />
             ) : (
@@ -75,7 +78,14 @@ export default async function FinalLabelPage({ searchParams }: {
                   <EmptyState title="Receita não encontrada" description="A receita solicitada não está disponível nesta conta. Selecione uma das suas receitas acima." />
                 ) : (
                   <>
-                  <Card className="shadow-none">
+                  <Card className="shadow-none" id="pendencias">
+                    <CardHeader className="flex-col"><CardTitle>O que falta para finalizar</CardTitle><CardDescription>A prévia abaixo já mostra os dados disponíveis. Depois de salvar uma informação, ela será atualizada.</CardDescription></CardHeader>
+                    {finalLabelPending(preview).length ? <ul className="space-y-3">{finalLabelPending(preview).map(issue => <li key={issue.code} className="rounded border p-3 text-sm"><p>{issue.message}</p><Link href={issue.href} className="mt-2 inline-flex min-h-11 items-center font-semibold text-[var(--brand-petrol)] underline">Resolver esta pendência</Link></li>)}</ul> : <p className="text-sm">As informações obrigatórias estão completas. Confira a prévia e o espaço do formato escolhido.</p>}
+                    {preview.issues.some(issue => issue.severity === "WARNING") ? <details className="mt-4 text-sm"><summary className="cursor-pointer">Observações opcionais</summary><ul className="mt-2 space-y-2">{preview.issues.filter(issue => issue.severity === "WARNING").map(issue => <li key={issue.code}>{issue.message}</li>)}</ul></details> : null}
+                  </Card>
+                  <details className="rounded border bg-white p-4">
+                    <summary className="cursor-pointer font-semibold">Modelo e tamanho · {labelTemplates[template].name} · {labelFormats[format].widthMm} × {labelFormats[format].heightMm} mm</summary>
+                  <Card className="mt-4 shadow-none">
                     <CardHeader className="flex-col"><CardTitle>Formato físico</CardTitle><CardDescription>Escolha o tamanho inicial da prévia. Confirme as medidas reais da sua embalagem antes de produzir.</CardDescription></CardHeader>
                     <div className="grid gap-3 sm:grid-cols-3">
                       {Object.entries(labelFormats).map(([key, option]) => {
@@ -101,11 +111,12 @@ export default async function FinalLabelPage({ searchParams }: {
                       })}
                     </div>
                   </Card>
+                  </details>
                   <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.8fr)]">
                     <Card className="min-w-0 shadow-none">
                       <CardHeader className="flex-col"><CardTitle>Prévia técnica do rótulo</CardTitle><CardDescription>{labelFormats[format].name} · {labelFormats[format].widthMm} × {labelFormats[format].heightMm} mm · {labelTemplates[template].name}. Mapa visual, não arquivo para impressão.</CardDescription></CardHeader>
                       <VisualLabelFrame preview={preview} format={format} template={template} />
-                      <h3 className="mt-6 text-sm font-semibold">Conteúdo técnico integral</h3>
+                      <details className="mt-6"><summary className="cursor-pointer text-sm font-semibold">Ver informações completas</summary>
                       <div className="min-w-0 space-y-5 rounded-[var(--radius-md)] border-2 border-[var(--border-strong)] bg-white p-4 sm:p-6">
                         <div className="border-b border-[var(--border)] pb-4">
                           <h2 className="break-words text-2xl font-bold">{preview.name}</h2>
@@ -114,14 +125,14 @@ export default async function FinalLabelPage({ searchParams }: {
                         </div>
                         <section aria-label="Ingredientes e declarações" className="space-y-2 text-sm leading-6">
                           <p className="break-words font-semibold">{preview.ingredientsText ?? "INGREDIENTES: informação pendente."}</p>
-                          {preview.allergens.length ? <p>ALÉRGICOS: CONTÉM {preview.allergens.join(", ")}.</p> : <p>{preview.allergenStatus === "NONE" ? "ALERGÊNICOS: ausência confirmada na revisão." : "ALERGÊNICOS: informação não determinada; revisão necessária."}</p>}
+                          {preview.allergens.length ? <p>ALÉRGICOS: CONTÉM {preview.allergens.join(", ")}.</p> : preview.allergenStatus === "UNKNOWN" ? <p>Alergênicos: informação pendente.</p> : null}
                           {preview.allergenStatus === "UNKNOWN" && preview.allergens.length > 0 ? <p>Há também informações de alergênicos não determinadas nos ingredientes. Revise antes de exportar.</p> : null}
                           <p>{disclosure(preview.glutenStatus, "GLÚTEN")}</p>
                           <p>{disclosure(preview.lactoseStatus, "LACTOSE")}</p>
                           {preview.crossContaminationRisk === "YES" ? <p>PODE CONTER: {preview.crossContaminationAllergens.join(", ") || "informação pendente"}.</p> : null}
                         </section>
                         <section aria-label="Tabela nutricional" className="min-w-0">
-                          {preview.nutritionTable ? <NutritionFactsTable model={preview.nutritionTable} /> : <p className="text-sm text-[var(--muted)]">Tabela nutricional indisponível até completar ingredientes e rendimento.</p>}
+                          {preview.nutritionTable ? <NutritionFactsTable model={preview.nutritionTable} showAvailableValues /> : <p className="text-sm text-[var(--muted)]">Tabela nutricional indisponível até completar ingredientes e rendimento.</p>}
                         </section>
                         <section aria-label="Rotulagem frontal">
                           {preview.frontOfPack ? <FrontOfPackNutritionPreview decision={preview.frontOfPack} /> : <p className="text-sm text-[var(--muted)]">Avaliação da lupa pendente.</p>}
@@ -136,6 +147,7 @@ export default async function FinalLabelPage({ searchParams }: {
                           ) : <div className="text-sm"><p>Código de barras ainda não associado.</p><Link href={`/codigo-de-barras?recipeId=${encodeURIComponent(preview.recipeId)}`} className="mt-2 inline-flex font-semibold text-[var(--brand-petrol)] underline">Adicionar código de barras</Link></div>}
                         </section>
                       </div>
+                      </details>
                     </Card>
 
                     <aside className="min-w-0 space-y-4">
@@ -143,7 +155,7 @@ export default async function FinalLabelPage({ searchParams }: {
                       <Card className="shadow-none">
                         <CardHeader className="flex-col"><CardTitle>Status do rótulo</CardTitle><CardDescription>{preview.status === "READY" ? "Dados disponíveis para esta prévia técnica." : preview.status === "REQUIRES_REVIEW" ? "Há pontos que exigem revisão." : "Há informações que impedem concluir o rótulo."}</CardDescription></CardHeader>
                         <Badge variant="secondary">{preview.status === "READY" ? "Pronto para revisão visual" : preview.status === "INCOMPLETE" ? "Incompleto" : "Requer revisão"}</Badge>
-                        {preview.issues.length ? <ul className="mt-4 space-y-3">{preview.issues.map((issue) => <li key={issue.code} className="rounded-[var(--radius-md)] border border-[var(--border)] p-3 text-sm"><span className="font-semibold">{issue.severity === "WARNING" ? "Aviso" : issue.severity === "REVIEW" ? "Revisão" : "Bloqueio"}: </span>{issue.message}</li>)}</ul> : <p className="mt-4 text-sm">Nenhuma pendência identificada pelos dados disponíveis.</p>}
+                        {preview.status !== "READY" ? <a href="#pendencias" className="mt-3 inline-flex min-h-11 items-center text-sm underline">Ver o que falta para finalizar</a> : null}
                       </Card>
                       <Card className="shadow-none">
                         <CardHeader className="flex-col"><CardTitle>{production?.allowed ? "Pronto para imprimir" : "PDF do rótulo"}</CardTitle><CardDescription>O arquivo usa o formato físico e o modelo visual selecionados acima.</CardDescription></CardHeader>

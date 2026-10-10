@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { type IngredientBaseUnit } from "@rotula-facil-pro/db";
 import { allergenStorage, normalizeAllergenDeclaration, type IngredientAllergenState } from "@rotula-facil-pro/db/allergens";
 import { requireUser } from "@/lib/auth/session";
+import { findRecipe } from "@/lib/recipes/repository";
 import { ingredientCategories } from "./categories";
 import {
   createCustomIngredient,
@@ -111,6 +112,8 @@ function redirectWithStatus(status: string): never {
 
 export async function createCustomIngredientAction(formData: FormData) {
   const user = await requireUser();
+  const returnRecipeId = formString(formData, "returnRecipeId");
+  if (returnRecipeId && !await findRecipe(user.id, returnRecipeId)) redirectWithStatus("denied");
   let status = "created";
 
   try {
@@ -120,6 +123,7 @@ export async function createCustomIngredientAction(formData: FormData) {
     status = "invalid";
   }
 
+  if (returnRecipeId) redirect(`/receitas/${encodeURIComponent(returnRecipeId)}/ingredientes?status=${status === "created" ? "ingrediente-proprio-criado" : "ingrediente-proprio-invalido"}`);
   redirectWithStatus(status);
 }
 

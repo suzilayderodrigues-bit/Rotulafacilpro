@@ -60,9 +60,7 @@ const colors: Record<LabelTemplate, { accent: string; border: string; surface: s
 function disclosureLines(preview: FinalLabelPreview) {
   const lines: string[] = [];
   if (preview.allergenStatus === "UNKNOWN") lines.push("ALERGÊNICOS: informação não determinada; revisão necessária.");
-  lines.push(preview.allergens.length
-    ? `ALÉRGICOS: CONTÉM ${preview.allergens.join(", ")}.`
-    : preview.allergenStatus === "NONE" ? "ALERGÊNICOS: ausência confirmada na revisão." : "ALERGÊNICOS: informação pendente.");
+  if (preview.allergens.length) lines.push(`ALÉRGICOS: CONTÉM ${preview.allergens.join(", ")}.`);
   lines.push(preview.glutenStatus === "CONTAINS" ? "CONTÉM GLÚTEN."
     : preview.glutenStatus === "DOES_NOT_CONTAIN" ? "NÃO CONTÉM GLÚTEN." : "GLÚTEN: revisão necessária.");
   lines.push(preview.lactoseStatus === "CONTAINS" ? "CONTÉM LACTOSE."
