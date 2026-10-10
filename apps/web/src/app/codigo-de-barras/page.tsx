@@ -1,12 +1,13 @@
-import { Badge, Button, Card, Input, Label } from "@/components/design-system";
+import { Badge, Button, Card, Label } from "@/components/design-system";
 import Link from "next/link";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { requireUser } from "@/lib/auth/session";
-import { associateBarcodeAction, createInternalBarcodeAction, createOfficialBarcodeAction } from "@/lib/barcodes/actions";
+import { associateBarcodeAction } from "@/lib/barcodes/actions";
 import { listBarcodes } from "@/lib/barcodes/repository";
 import { renderBarcodeSvg } from "@/lib/barcodes/render";
 import { listRecipes } from "@/lib/recipes/repository";
+import { CreateBarcodeForm } from "./create-barcode-form";
 import { DeleteBarcodeForm } from "./delete-barcode-form";
 
 const messages: Record<string, string> = {
@@ -67,35 +68,13 @@ export default async function BarcodePage({
               <Card className="shadow-none">
                 <h2 className="text-lg font-semibold">Já tenho um código oficial</h2>
                 <p className="mt-2 text-sm text-[var(--muted)]">Use um GTIN que já pertence ao seu produto.</p>
-                <form action={createOfficialBarcodeAction} className="mt-5 space-y-4">
-                  <div>
-                    <Label htmlFor="gtin">Código GTIN</Label>
-                    <Input id="gtin" name="gtin" inputMode="numeric" autoComplete="off" required placeholder="Digite o número do GTIN" />
-                  </div>
-                  <div>
-                    <Label htmlFor="official-recipe">Produto/receita (opcional)</Label>
-                    <select id="official-recipe" name="recipeId" defaultValue={selectedRecipeId ?? ""} className="h-10 w-full min-w-0 rounded-[var(--radius-md)] border border-[var(--border)] bg-white px-3 text-sm">
-                      <option value="">Sem receita associada</option>
-                      {availableRecipes.map((recipe) => <option key={recipe.id} value={recipe.id}>{recipe.name}</option>)}
-                    </select>
-                  </div>
-                  <Button type="submit" className="w-full sm:w-auto">Validar e salvar</Button>
-                </form>
+                <CreateBarcodeForm key={`"official":${selectedRecipeId ?? ""}`} internal={false} recipes={availableRecipes.map(recipe => ({ id: recipe.id, name: recipe.name }))} initialRecipeId={selectedRecipeId} />
               </Card>
               <Card className="shadow-none">
                 <h2 className="text-lg font-semibold">Gerar código interno</h2>
                 <p className="mt-2 text-sm text-[var(--muted)]">Crie um código para identificação e organização dentro do seu negócio.</p>
                 <p className="mt-3 text-sm font-medium text-[var(--brand-petrol)]">Este código não substitui um GTIN oficial.</p>
-                <form action={createInternalBarcodeAction} className="mt-5 space-y-4">
-                  <div>
-                    <Label htmlFor="internal-recipe">Produto/receita (opcional)</Label>
-                    <select id="internal-recipe" name="recipeId" defaultValue={selectedRecipeId ?? ""} className="h-10 w-full min-w-0 rounded-[var(--radius-md)] border border-[var(--border)] bg-white px-3 text-sm">
-                      <option value="">Sem receita associada</option>
-                      {availableRecipes.map((recipe) => <option key={recipe.id} value={recipe.id}>{recipe.name}</option>)}
-                    </select>
-                  </div>
-                  <Button type="submit" className="w-full sm:w-auto">Gerar código interno</Button>
-                </form>
+                <CreateBarcodeForm key={`"internal":${selectedRecipeId ?? ""}`} internal={true} recipes={availableRecipes.map(recipe => ({ id: recipe.id, name: recipe.name }))} initialRecipeId={selectedRecipeId} />
               </Card>
             </section>
 

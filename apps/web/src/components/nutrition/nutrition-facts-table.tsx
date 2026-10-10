@@ -2,17 +2,22 @@ import type { NutritionTableViewModel } from "@/lib/regulatory";
 
 type NutritionFactsTableProps = {
   model: NutritionTableViewModel;
+  showAvailableValues?: boolean;
 };
 
 function DeclaredValue({ value }: { value: string | null }) {
   return value === null ? <span className="font-normal">Não informado</span> : value;
 }
 
-export function NutritionFactsTable({ model }: NutritionFactsTableProps) {
+export function NutritionFactsTable({ model, showAvailableValues = false }: NutritionFactsTableProps) {
   if (model.configurationRequired) {
     return (
       <div className="rounded-[var(--radius-md)] border border-[#f4d5b6] bg-[#fff8f0] px-4 py-3 text-sm leading-6 text-[#8a4b15]">
         {model.statusMessage}
+        {showAvailableValues ? <div className="mt-3">
+          <p className="font-semibold">Valores disponíveis por {model.basisLabel} — prévia parcial, não tabela concluída</p>
+          <dl className="mt-2 divide-y divide-[var(--border)]">{model.rows.map(row => <div key={row.nutrient} className="flex flex-wrap justify-between gap-2 py-1"><dt>{row.label} ({row.unit})</dt><dd><DeclaredValue value={row.per100Value} /></dd></div>)}</dl>
+        </div> : null}
       </div>
     );
   }

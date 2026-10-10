@@ -177,7 +177,7 @@ export default async function RecipeYieldStepPage({ params, searchParams }: Reci
                   <div>
                     <CardTitle>Rendimento da receita pronta</CardTitle>
                     <CardDescription>
-                      Preencha dois campos para calcular o terceiro automaticamente. A unidade desta receita é {unit}.
+                      Informe as unidades prontas e o peso de cada uma, ou o total pronto vendido por peso/volume. A unidade desta receita é {unit}.
                     </CardDescription>
                   </div>
                 </CardHeader>

@@ -17,6 +17,7 @@ import { Topbar } from "@/components/layout/topbar";
 import { requireUser } from "@/lib/auth/session";
 import { removeRecipeIngredientAction, updateRecipeIngredientAction } from "@/lib/recipes/actions";
 import { IngredientSelector } from "./ingredient-selector";
+import { searchAccessibleIngredients } from "@/lib/ingredients/repository";
 import { findRecipe } from "@/lib/recipes/repository";
 import { cn } from "@/lib/utils";
 
@@ -196,7 +197,7 @@ export default async function RecipeIngredientsStepPage({ params, searchParams }
                   </div>
                 </CardHeader>
 
-                <IngredientSelector recipeId={recipe.id} addedIds={recipe.ingredients.map((item) => item.ingredientId)} />
+                <IngredientSelector recipeId={recipe.id} addedIds={recipe.ingredients.map((item) => item.ingredientId)} initialPage={await searchAccessibleIngredients(user.id, "", 0)} />
               </Card>
 
               <Card className="shadow-none">

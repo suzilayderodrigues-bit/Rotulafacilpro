@@ -1,16 +1,12 @@
 import Link from "next/link";
-import { Edit3, Filter, Leaf, Plus, Search, Trash2, X } from "lucide-react";
+import { Edit3, Plus, Trash2, X } from "lucide-react";
 import {
   Badge,
-  Button,
   Card,
   CardDescription,
   CardHeader,
   CardTitle,
   EmptyState,
-  Input,
-  Label,
-  Select,
   Toast
 } from "@/components/design-system";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -22,8 +18,9 @@ import {
   findBaseRotulaIngredient,
   findCustomIngredient,
   listBaseRotulaIngredients,
-  listCustomIngredients
+  listIngredientPage
 } from "@/lib/ingredients/repository";
+import { IngredientFilters } from "./_components/ingredient-filters";
 import { cn } from "@/lib/utils";
 import { CustomIngredientForm, type CustomIngredientFormInitial } from "./_components/custom-ingredient-form";
 import { DeleteCustomIngredientForm } from "./_components/delete-custom-ingredient-form";
@@ -35,6 +32,7 @@ type IngredientSearchParams = {
   ingrediente?: string | string[];
   modal?: string | string[];
   status?: string | string[];
+  pagina?: string | string[];
 };
 
 type IngredientsPageProps = {
@@ -102,10 +100,6 @@ function referenceLabel(baseQuantity: unknown, baseUnit: string) {
   return `${formatDecimal(baseQuantity)} ${unit}`;
 }
 
-function sourceLabel(dataOrigin: string) {
-  return dataOrigin.replace(/^FABRICANTE - /, "");
-}
-
 function boolLabel(value: boolean | null) {
   if (value === true) return "Sim";
   if (value === false) return "Não";
@@ -124,7 +118,8 @@ function buildIngredientsHref({
   category,
   modal,
   ingredientId,
-  status
+  status,
+  page
 }: {
   tab?: "base" | "meus";
   search?: string;
@@ -132,6 +127,7 @@ function buildIngredientsHref({
   modal?: string;
   ingredientId?: string;
   status?: string;
+  page?: number;
 }) {
   const params = new URLSearchParams();
 
@@ -141,6 +137,7 @@ function buildIngredientsHref({
   if (modal) params.set("modal", modal);
   if (ingredientId) params.set("ingrediente", ingredientId);
   if (status) params.set("status", status);
+  if (page) params.set("pagina", String(page));
 
   const query = params.toString();
   return query ? `/ingredientes?${query}` : "/ingredientes";
@@ -177,54 +174,16 @@ function IngredientCard({
   category?: string;
 }) {
   return (
-    <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-white p-4 transition hover:border-[#b9e8ef] hover:bg-[var(--surface-muted)]">
-      <Link
-        href={buildIngredientsHref({ tab, search, category, modal: "detalhes", ingredientId: ingredient.id })}
-        className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-tiffany)]"
-      >
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[#e8f7fa] text-[var(--brand-petrol)] ring-1 ring-[rgba(245,158,11,0.2)]">
-            <Leaf className="size-5" />
-          </div>
-          <Badge variant={tab === "meus" ? "cyan" : "secondary"} className="max-w-[70%] truncate">
-            {tab === "meus" ? "Meu ingrediente" : ingredient.category}
-          </Badge>
-        </div>
-        <h2 className="text-base font-semibold text-[var(--foreground)]">{ingredient.name}</h2>
-        <dl className="mt-4 space-y-2 text-sm">
-          <div className="flex items-center justify-between gap-3">
-            <dt className="text-[var(--muted)]">Categoria</dt>
-            <dd className="truncate text-right font-medium text-[var(--foreground)]">{ingredient.category}</dd>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <dt className="text-[var(--muted)]">Referência</dt>
-            <dd className="font-semibold text-[var(--brand-petrol)]">por {referenceLabel(ingredient.baseQuantity, ingredient.baseUnit)}</dd>
-          </div>
-          {tab === "base" ? (
-            <div className="flex items-center justify-between gap-3">
-              <dt className="text-[var(--muted)]">Fonte</dt>
-              <dd className="truncate text-right font-medium text-[var(--foreground)]">{sourceLabel(ingredient.dataOrigin)}</dd>
-            </div>
-          ) : null}
-        </dl>
+    <li className="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <Link href={buildIngredientsHref({ tab, search, category, modal: "detalhes", ingredientId: ingredient.id })} className="min-w-0 flex-1 rounded p-1 hover:bg-[var(--surface-muted)]">
+        <span className="block break-words font-semibold">{ingredient.name}</span>
+        <span className="text-xs text-[var(--muted)]">{ingredient.category} · por {referenceLabel(ingredient.baseQuantity, ingredient.baseUnit)}</span>
       </Link>
-
-      {tab === "meus" ? (
-        <div className="mt-4 grid gap-2 border-t border-[var(--border)] pt-4 sm:grid-cols-3">
-          <Link href={buildIngredientsHref({ tab, search, category, modal: "detalhes", ingredientId: ingredient.id })} className="inline-flex h-9 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border)] bg-white px-3 text-sm font-semibold text-[var(--brand-petrol)] hover:bg-[var(--surface-muted)]">
-            Ver detalhes
-          </Link>
-          <Link href={buildIngredientsHref({ tab, search, category, modal: "editar", ingredientId: ingredient.id })} className="inline-flex h-9 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-white px-3 text-sm font-semibold text-[var(--brand-petrol)] hover:bg-[var(--surface-muted)]">
-            <Edit3 className="size-4" />
-            Editar
-          </Link>
-          <Link href={buildIngredientsHref({ tab, search, category, modal: "excluir", ingredientId: ingredient.id })} className="inline-flex h-9 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#f0c4c0] bg-[var(--error-bg)] px-3 text-sm font-semibold text-[var(--error)] hover:bg-[#fde5e2]">
-            <Trash2 className="size-4" />
-            Excluir
-          </Link>
-        </div>
-      ) : null}
-    </div>
+      {tab === "meus" ? <div className="flex shrink-0 gap-2">
+        <Link aria-label={`Editar ${ingredient.name}`} href={buildIngredientsHref({ tab, search, category, modal: "editar", ingredientId: ingredient.id })} className="inline-flex min-h-11 items-center gap-1 px-2 text-sm"><Edit3 className="size-4" />Editar</Link>
+        <Link aria-label={`Excluir ${ingredient.name}`} href={buildIngredientsHref({ tab, search, category, modal: "excluir", ingredientId: ingredient.id })} className="inline-flex min-h-11 items-center gap-1 px-2 text-sm text-[var(--error)]"><Trash2 className="size-4" />Excluir</Link>
+      </div> : null}
+    </li>
   );
 }
 
@@ -279,13 +238,14 @@ export default async function IngredientsPage({ searchParams }: IngredientsPageP
   const status = cleanParam(params?.status);
   const safeCategory = ingredientCategories.includes(category as (typeof ingredientCategories)[number]) ? category : undefined;
 
-  const [baseIngredients, customIngredients, selectedBaseIngredient, selectedCustomIngredient] = await Promise.all([
-    listBaseRotulaIngredients({ search: tab === "base" ? search : undefined, category: tab === "base" ? safeCategory : undefined }),
-    listCustomIngredients(user.id, { search: tab === "meus" ? search : undefined, category: tab === "meus" ? safeCategory : undefined }),
+  const pageText = cleanParam(params?.pagina) ?? "0";
+  const page = /^\d{1,4}$/.test(pageText) ? Math.min(Number(pageText), 1000) : 0;
+  const [ingredientPage, selectedBaseIngredient, selectedCustomIngredient] = await Promise.all([
+    listIngredientPage(user.id, tab, search, safeCategory, page),
     tab === "base" && selectedIngredientId ? findBaseRotulaIngredient(selectedIngredientId) : Promise.resolve(null),
     tab === "meus" && selectedIngredientId ? findCustomIngredient(user.id, selectedIngredientId) : Promise.resolve(null)
   ]);
-  const activeIngredients = tab === "base" ? baseIngredients : customIngredients;
+  const activeIngredients = ingredientPage.items;
   const selectedIngredient = tab === "base" ? selectedBaseIngredient : selectedCustomIngredient;
   const closeHref = buildIngredientsHref({ tab, search, category: safeCategory });
 
@@ -327,39 +287,19 @@ export default async function IngredientsPage({ searchParams }: IngredientsPageP
                   <CardTitle>{tab === "base" ? "Base Rotula" : "Meus ingredientes"}</CardTitle>
                   <CardDescription>{tab === "base" ? "Ingredientes oficiais disponíveis para consulta." : "Cadastre ingredientes que você usa e não encontrou na Base Rotula."}</CardDescription>
                 </div>
-                <form className="grid w-full gap-3 md:grid-cols-[1fr_240px_auto] lg:max-w-3xl" action="/ingredientes">
-                  {tab === "meus" ? <input type="hidden" name="aba" value="meus" /> : null}
-                  <div>
-                    <Label htmlFor="busca" className="sr-only">Buscar ingrediente</Label>
-                    <div className="relative">
-                      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--muted)]" />
-                      <Input id="busca" name="busca" defaultValue={search ?? ""} placeholder="Buscar por nome" className="pl-9" />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="categoria" className="sr-only">Categoria</Label>
-                    <div className="relative">
-                      <Filter className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--muted)]" />
-                      <Select id="categoria" name="categoria" defaultValue={safeCategory ?? ""} className="pl-9">
-                        <option value="">Todas as categorias</option>
-                        {ingredientCategories.map((item) => <option key={item} value={item}>{item}</option>)}
-                      </Select>
-                    </div>
-                  </div>
-                  <Button type="submit" className="w-full md:w-auto">Filtrar</Button>
-                </form>
+                <IngredientFilters key={`${tab}:${search ?? ""}:${safeCategory ?? ""}`} tab={tab} search={search} category={safeCategory} />
               </CardHeader>
 
               <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-[var(--muted)]">
-                <span>{activeIngredients.length} ingrediente{activeIngredients.length === 1 ? "" : "s"} encontrado{activeIngredients.length === 1 ? "" : "s"}</span>
+                <span>{activeIngredients.length} ingrediente{activeIngredients.length === 1 ? "" : "s"} nesta página</span>
                 {search ? <Badge variant="secondary">Busca: {search}</Badge> : null}
                 {safeCategory ? <Badge variant="secondary">Categoria: {safeCategory}</Badge> : null}
               </div>
 
               {activeIngredients.length > 0 ? (
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <ul className="max-h-[60dvh] divide-y divide-[var(--border)] overflow-y-auto" aria-label="Lista alfabética de ingredientes">
                   {activeIngredients.map((ingredient) => <IngredientCard key={ingredient.id} ingredient={ingredient} tab={tab} search={search} category={safeCategory} />)}
-                </div>
+                </ul>
               ) : (
                 <EmptyState
                   title={tab === "meus" ? "Você ainda não cadastrou nenhum ingrediente." : "Nenhum ingrediente encontrado."}
@@ -371,6 +311,11 @@ export default async function IngredientsPage({ searchParams }: IngredientsPageP
                   )}
                 />
               )}
+              <nav aria-label="Páginas de ingredientes" className="mt-4 flex flex-wrap items-center gap-3">
+                {page > 0 ? <Link href={buildIngredientsHref({ tab, search, category: safeCategory, page: page - 1 })} className="p-3 text-sm font-semibold">Anterior</Link> : null}
+                <span className="text-sm">Página {page + 1}</span>
+                {ingredientPage.hasMore ? <Link href={buildIngredientsHref({ tab, search, category: safeCategory, page: page + 1 })} className="p-3 text-sm font-semibold">Próxima</Link> : null}
+              </nav>
             </Card>
           </div>
         </div>

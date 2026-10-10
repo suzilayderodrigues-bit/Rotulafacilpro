@@ -22,13 +22,13 @@ const ingredientTextSearchWhere = (search?: string): Prisma.IngredientWhereInput
         OR: [
           {
             name: {
-              contains: search,
+              startsWith: search,
               mode: "insensitive"
             }
           },
           {
             normalizedName: {
-              contains: normalizeSearch(search),
+              startsWith: normalizeSearch(search),
               mode: "insensitive"
             }
           }
@@ -96,7 +96,7 @@ export async function searchAccessibleIngredients(userId: string, search: string
   const rows = await prisma.ingredient.findMany({
     where: { AND: [accessibleIngredientWhere(userId), ingredientTextSearchWhere(search)] },
     select: { id: true, name: true, category: true, source: true, baseUnit: true },
-    orderBy: [{ name: "asc" }, { id: "asc" }],
+    orderBy: [{ normalizedName: "asc" }, { name: "asc" }, { id: "asc" }],
     skip: page * pageSize,
     take: pageSize + 1
   });
@@ -110,6 +110,17 @@ export function listBaseRotulaIngredients(filters?: { search?: string; category?
       name: "asc"
     }
   });
+}
+
+export async function listIngredientPage(userId: string, tab: "base" | "meus", search: string | undefined, category: string | undefined, page: number) {
+  const pageSize = 30;
+  const rows = await prisma.ingredient.findMany({
+    where: tab === "base" ? baseRotulaIngredientWhere({ search, category }) : customIngredientWhere(userId, { search, category }),
+    orderBy: [{ normalizedName: "asc" }, { name: "asc" }, { id: "asc" }],
+    skip: page * pageSize,
+    take: pageSize + 1
+  });
+  return { items: rows.slice(0, pageSize), hasMore: rows.length > pageSize };
 }
 
 export function listCustomIngredients(

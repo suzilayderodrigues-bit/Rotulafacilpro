@@ -52,7 +52,7 @@ export async function createOfficialBarcodeAction(formData: FormData) {
     }
   }
 
-  redirect(`${pagePath}?status=${status}`);
+  redirect(`${pagePath}?${new URLSearchParams({ status, ...(recipeId && status !== "oficial-criado" ? { recipeId } : {}) })}`);
 }
 
 export async function createInternalBarcodeAction(formData: FormData) {
@@ -68,7 +68,7 @@ export async function createInternalBarcodeAction(formData: FormData) {
     else if (isDuplicate(error)) status = await duplicateStatus(user.id, recipeId);
   }
 
-  redirect(`${pagePath}?status=${status}`);
+  redirect(`${pagePath}?${new URLSearchParams({ status, ...(recipeId && status !== "interno-criado" ? { recipeId } : {}) })}`);
 }
 
 export async function associateBarcodeAction(formData: FormData) {

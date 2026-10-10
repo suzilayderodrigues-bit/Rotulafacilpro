@@ -224,6 +224,7 @@ export async function updateRecipeYieldAction(formData: FormData) {
 
   try {
     await updateRecipeYield(user.id, recipeId, {
+      yieldMode: formString(formData, "yieldMode"),
       finalYieldAmount: formString(formData, "finalYieldAmount"),
       unitsProduced: formString(formData, "unitsProduced"),
       unitWeight: formString(formData, "unitWeight")

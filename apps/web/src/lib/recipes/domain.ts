@@ -10,6 +10,7 @@ import type {
 import { calculateMainPanelAreaCm2 } from "./main-panel";
 
 export type RecipeYieldInput = {
+  yieldMode?: string;
   finalYieldAmount?: number | string | null;
   unitsProduced?: number | string | null;
   unitWeight?: number | string | null;
@@ -311,6 +312,21 @@ export function resolveRecipeYieldValues(input: {
 }
 
 export function validateRecipeYieldInput(input: RecipeYieldInput) {
+  if (input.yieldMode === "UNITS") {
+    const unitsProduced = parseOptionalPositiveInteger(input.unitsProduced, "invalid-units-produced");
+    const unitWeight = parseOptionalPositiveDecimal(input.unitWeight, "invalid-unit-weight");
+    if (unitsProduced === null) throw new RecipeValidationError("invalid-units-produced");
+    if (unitWeight === null) throw new RecipeValidationError("invalid-unit-weight");
+    const finalYieldAmount = unitsProduced * unitWeight;
+    if (!Number.isFinite(finalYieldAmount)) throw new RecipeValidationError("invalid-final-yield");
+    return { finalYieldAmount, unitsProduced, unitWeight };
+  }
+  if (input.yieldMode === "BULK") {
+    const finalYieldAmount = parseOptionalPositiveDecimal(input.finalYieldAmount, "invalid-final-yield");
+    if (finalYieldAmount === null) throw new RecipeValidationError("invalid-final-yield");
+    return { finalYieldAmount, unitsProduced: null, unitWeight: null };
+  }
+  if (input.yieldMode) throw new RecipeValidationError("inconsistent-yield");
   const finalYieldAmount = parseOptionalPositiveDecimal(input.finalYieldAmount, "invalid-final-yield");
   const unitsProduced = parseOptionalPositiveInteger(input.unitsProduced, "invalid-units-produced");
   const unitWeight = parseOptionalPositiveDecimal(input.unitWeight, "invalid-unit-weight");

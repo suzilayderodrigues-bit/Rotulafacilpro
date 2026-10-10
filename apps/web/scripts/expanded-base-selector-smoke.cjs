@@ -109,6 +109,7 @@ function matches(row, where) {
     if (key === 'AND') return value.every((part) => matches(row, part));
     if (key === 'OR') return value.some((part) => matches(row, part));
     if (value && typeof value === 'object' && 'contains' in value) return row[key].toLowerCase().includes(value.contains.toLowerCase());
+    if (value && typeof value === 'object' && 'startsWith' in value) return row[key].toLowerCase().startsWith(value.startsWith.toLowerCase());
     return row[key] === value;
   });
 }
@@ -147,7 +148,8 @@ async function testSelector() {
   assert(first.items.every((row) => !('userId' in row) && !('caloriesKcal' in row)));
   const second = await ingredientRepo.searchAccessibleIngredients('A', 'acucar', 1);
   assert.equal(new Set([...first.items, ...second.items].map((row) => row.id)).size, 40);
-  assert.equal((await ingredientRepo.searchAccessibleIngredients('A', 'cacau', 0)).items[0].id, 'own');
+  assert.equal((await ingredientRepo.searchAccessibleIngredients('A', 'Meu', 0)).items[0].id, 'own');
+  assert.equal((await ingredientRepo.searchAccessibleIngredients('A', 'cacau', 0)).items.length, 0, 'Search is by prefix, not an interior word');
   assert.equal((await ingredientRepo.searchAccessibleIngredients('B', 'cacau', 0)).items.length, 0);
   assert.equal((await ingredientRepo.searchAccessibleIngredients('A', 'secreto', 0)).items.length, 0);
   const panel = load('apps/web/src/lib/recipes/main-panel.ts');
