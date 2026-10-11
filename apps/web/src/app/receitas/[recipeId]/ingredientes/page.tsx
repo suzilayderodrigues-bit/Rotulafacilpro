@@ -23,6 +23,7 @@ import { findRecipe } from "@/lib/recipes/repository";
 import { cn } from "@/lib/utils";
 import { RecipeComposition } from "./recipe-composition";
 import { CustomIngredientForm } from "@/app/ingredientes/_components/custom-ingredient-form";
+import { ingredientComplementHref, missingIngredientInformation } from "@/lib/ingredients/complement";
 
 type RecipeIngredientsStepPageProps = {
   params: Promise<{ recipeId: string }>;
@@ -70,13 +71,14 @@ function sourceLabel(source: string) {
 
 
 
-function RecipeIngredientRow({ item, recipeId }: { item: RecipeItem; recipeId: string }) {
+function RecipeIngredientRow({ item, recipeId, format, template }: { item: RecipeItem; recipeId: string; format?: string; template?: string }) {
   return (
     <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-white p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-[var(--foreground)]">{item.ingredient.name}</h3>
           <p className="mt-1 text-xs font-medium text-[var(--muted)]">{sourceLabel(item.ingredient.source)}</p>
+          {missingIngredientInformation(item.ingredient).length ? <Link href={ingredientComplementHref(recipeId, item.id, format, template)} className="inline-flex min-h-11 items-center text-sm font-semibold underline">Completar informações ausentes nesta receita</Link> : null}
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <form action={updateRecipeIngredientAction} className="flex flex-wrap items-center gap-2">
@@ -195,7 +197,7 @@ export default async function RecipeIngredientsStepPage({ params, searchParams }
                 {recipe.ingredients.length > 0 ? (
                   <div className="space-y-3">
                     {recipe.ingredients.map((item) => (
-                      <RecipeIngredientRow key={item.id} item={item} recipeId={recipe.id} />
+                      <RecipeIngredientRow key={item.id} item={item} recipeId={recipe.id} format={cleanParam(query.format)} template={cleanParam(query.template)} />
                     ))}
                   </div>
                 ) : (

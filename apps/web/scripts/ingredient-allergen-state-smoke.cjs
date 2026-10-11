@@ -34,6 +34,11 @@ assert.equal(allergy.allergenStorage(unknown).allergenStatus, 'UNKNOWN');
 const table = { status: 'COMPLETE', rows: [], missingNutrients: [] };
 const nutrition = { sodiumMg: null, transFatG: 0 };
 const compositor = load('apps/web/src/lib/final-label/preview.ts', {
+  '@/lib/ingredients/complement': load('apps/web/src/lib/ingredients/complement.ts', {
+    '@rotula-facil-pro/db/allergens': allergy,
+    './nutrition': load('apps/web/src/lib/ingredients/nutrition.ts'),
+    '@/lib/final-label/visual': load('apps/web/src/lib/final-label/visual.ts')
+  }),
   '@rotula-facil-pro/db/allergens': allergy,
   '@/lib/barcodes/repository': {}, '@/lib/barcodes/render': {}, '@/lib/recipes/repository': {},
   '@/lib/recipes/main-panel': { deriveRecipeMainPanelAreaCm2: () => 85 },

@@ -7,6 +7,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { requireUser } from "@/lib/auth/session";
 import { resolveIngredientAllergenState } from "@rotula-facil-pro/db/allergens";
+import { ingredientComplementHref } from "@/lib/ingredients/complement";
 import { updateRecipeInformationAction } from "@/lib/recipes/actions";
 import { findRecipe } from "@/lib/recipes/repository";
 import { conditionalAnnexXviCategories } from "@/lib/regulatory";
@@ -191,7 +192,7 @@ export default async function RecipeInformationStepPage({ params, searchParams }
                 {hasUnknownAllergens ? (
                   <div className="mt-4 rounded-[var(--radius-md)] border border-[#f4d5b6] bg-[#fff8f0] px-4 py-3 text-sm text-[#8a4b15]">
                     Alguns ingredientes têm alergênicos não determinados. Isso não significa ausência. O PDF do rótulo ficará bloqueado para revisão enquanto essa informação estiver desconhecida.
-                    <ul className="mt-2 space-y-2">{recipe.ingredients.filter(item => resolveIngredientAllergenState(item.ingredient) === "UNKNOWN").map(item => <li key={item.id}>{item.ingredient.name}{item.ingredient.source === "CUSTOM" ? <Link href={`/ingredientes?aba=meus&modal=editar&ingredientId=${encodeURIComponent(item.ingredient.id)}`} className="ml-2 underline">Completar ingrediente próprio</Link> : <span> — confira a fonte ou substitua por um ingrediente próprio com informações verificadas.</span>}</li>)}</ul>
+                    <ul className="mt-2 space-y-2">{recipe.ingredients.filter(item => resolveIngredientAllergenState(item.ingredient) === "UNKNOWN").map(item => <li key={item.id}>{item.ingredient.name}<Link href={ingredientComplementHref(recipe.id, item.id, typeof query.format === "string" ? query.format : undefined, typeof query.template === "string" ? query.template : undefined)} className="ml-2 inline-flex min-h-11 items-center underline">Completar informação somente nesta receita</Link></li>)}</ul>
                   </div>
                 ) : null}
 

@@ -4,6 +4,7 @@ import { renderBarcodeSvg, type BarcodeRenderResult } from "@/lib/barcodes/rende
 import { calculateRecipeNutrition, NutritionCalculationError } from "@/lib/nutrition";
 import { findRecipeForNutrition } from "@/lib/recipes/repository";
 import { deriveRecipeMainPanelAreaCm2 } from "@/lib/recipes/main-panel";
+import { missingIngredientInformation } from "@/lib/ingredients/complement";
 import {
   buildNutritionTableViewModel,
   calculateNutritionPerServing,
@@ -30,6 +31,7 @@ export type FinalLabelPreview = {
   ingredientsText: string | null;
   allergens: string[];
   allergenStatus: IngredientAllergenState;
+  ingredientCompletions?: { itemId: string; name: string; missing: string[] }[];
   glutenStatus: Recipe["glutenStatus"];
   lactoseStatus: Recipe["lactoseStatus"];
   crossContaminationRisk: Recipe["crossContaminationRisk"];
@@ -156,6 +158,7 @@ export function composeFinalLabelPreview(recipe: Recipe, barcode: Barcode | null
     recipeId: recipe.id, name: recipe.name, physicalState: recipe.physicalState,
     netQuantityLabel, ingredients, ingredientsText,
     allergens, allergenStatus, glutenStatus: recipe.glutenStatus,
+    ingredientCompletions: recipe.ingredients.map(item => ({ itemId: item.id, name: item.ingredient.name, missing: missingIngredientInformation(item.ingredient) })).filter(item => item.missing.length > 0),
     lactoseStatus: recipe.lactoseStatus, crossContaminationRisk: recipe.crossContaminationRisk,
     crossContaminationAllergens: recipe.crossContaminationAllergens,
     nutritionTable, frontOfPack, barcode: barcodePreview, issues, status
