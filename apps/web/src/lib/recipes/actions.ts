@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { labelPreviewHref, resolveLabelFormat, resolveLabelTemplate } from "@/lib/final-label/visual";
 import { type IngredientBaseUnit, type RecipePhysicalState } from "@rotula-facil-pro/db";
 import { requireUser } from "@/lib/auth/session";
 import { RecipeValidationError } from "./domain";
@@ -291,10 +292,10 @@ export async function updateRecipeInformationAction(formData: FormData) {
       reviewed: formString(formData, "reviewed")
     });
   } catch (error) {
-    redirect("/receitas/" + recipeId + "/informacoes?status=" + informationErrorParam(error) + (formString(formData, "returnTo") === "label" ? "&returnTo=label" : ""));
+    redirect("/receitas/" + recipeId + "/informacoes?status=" + informationErrorParam(error) + (formString(formData, "returnTo") === "label" ? "&" + new URLSearchParams({ returnTo: "label", format: resolveLabelFormat(formString(formData, "format")), template: resolveLabelTemplate(formString(formData, "template")) }) : ""));
   }
 
-  if (formString(formData, "returnTo") === "label") redirect("/rotulo-final?recipeId=" + encodeURIComponent(recipeId));
+  if (formString(formData, "returnTo") === "label") redirect(labelPreviewHref(recipeId, resolveLabelFormat(formString(formData, "format")), resolveLabelTemplate(formString(formData, "template"))));
   redirect("/receitas/" + recipeId);
 }
 

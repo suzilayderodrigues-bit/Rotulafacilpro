@@ -68,7 +68,7 @@ export function IngredientSelector({ recipeId, addedIds, initialPage, customIngr
         <Label htmlFor="selector-amount">Quantidade utilizada ({selected.baseUnit === "MILLILITER" ? "ml" : "g"})</Label>
         <Input id="selector-amount" name="amount" type="number" min="0.01" step="0.01" inputMode="decimal" required autoFocus />
         <div className="flex flex-wrap gap-2">
-          <Button type="submit">Adicionar à receita</Button>
+          <Button type="submit">Salvar</Button>
           <Button type="button" variant="outline" onClick={() => setSelected(null)}>Trocar ingrediente</Button>
         </div>
       </form> : <>

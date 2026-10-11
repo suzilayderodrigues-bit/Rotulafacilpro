@@ -16,6 +16,7 @@ let used = 0;
 const recipes = [], items = [], barcodes = [];
 const mocks = {}, modules = new Map();
 let fetchCalls = 0;
+const selectionStorage = new Map();
 class Redirect extends Error { constructor(url) { super('redirect'); this.url = url; } }
 class EntitlementError extends Error { constructor(code) { super(code); this.code = code; } }
 function load(file) {
@@ -28,6 +29,7 @@ function load(file) {
   }}).outputText;
   function resolveFile(base) { return [base + '.ts', base + '.tsx', path.join(base, 'index.ts')].find(fs.existsSync); }
   vm.runInNewContext(code, { exports, Date, Math, Number, String, Set, Map, Buffer, URL, URLSearchParams, FormData, Request, Response, AbortController, console, setTimeout, clearTimeout,
+    sessionStorage: { getItem: key => selectionStorage.get(key) ?? null, setItem: (key, value) => selectionStorage.set(key, value) },
     fetch: async (url, { signal }) => {
       fetchCalls++;
       assert(!signal.aborted);
@@ -173,7 +175,7 @@ async function main() {
   assert.equal((await repo.removeRecipeIngredient('other', ownItem.id)).count, 0);
   assert((await action(actions.removeRecipeIngredientAction, { recipeId: recipe.id, recipeIngredientId: ownItem.id })).includes('status=removido'));
   assert.equal(items.length, 1);
-  assert.equal(await action(actions.updateRecipeInformationAction, { returnTo: 'label', recipeId: recipe.id, regulatoryCategory: 'OUTSIDE_ANNEX_XVI', packagingCondition: 'PACKAGED_IN_ABSENCE_OF_CONSUMER', mainPanelWidthCm: 5, mainPanelHeightCm: 17, reviewed: 'on', glutenStatus: 'DOES_NOT_CONTAIN', lactoseStatus: 'DOES_NOT_CONTAIN', crossContaminationRisk: 'NO' }), `/rotulo-final?recipeId=${recipe.id}`);
+  assert.equal(await action(actions.updateRecipeInformationAction, { returnTo: 'label', format: 'POUCH', template: 'CLEAN', recipeId: recipe.id, regulatoryCategory: 'OUTSIDE_ANNEX_XVI', packagingCondition: 'PACKAGED_IN_ABSENCE_OF_CONSUMER', mainPanelWidthCm: 5, mainPanelHeightCm: 17, reviewed: 'on', glutenStatus: 'DOES_NOT_CONTAIN', lactoseStatus: 'DOES_NOT_CONTAIN', crossContaminationRisk: 'NO' }), `/rotulo-final?recipeId=${recipe.id}&format=POUCH&template=CLEAN`);
   const barcodeActions = load('apps/web/src/lib/barcodes/actions.ts');
   failCreation = true;
   const failedUrl = new URL(await action(barcodeActions.createInternalBarcodeAction, { recipeId: recipe.id }), 'https://example.invalid');
@@ -189,7 +191,20 @@ async function main() {
   assert.equal(pdf.assessFinalLabelPdf(partial, 'CINTA').allowed, false);
   const ready = compositor.composeFinalLabelPreview({ ...hydrate(recipe), ingredients: [{ ...hydrate(recipe).ingredients[0], ingredient: { ...ingredient, allergenStatus: 'NONE' } }] }, barcodes[0]);
   assert.equal(ready.status, 'READY');
+  const knownItems = ['LEITE', 'TRIGO'].map(value => ({ ...hydrate(recipe).ingredients[0], ingredient: { ...ingredient, allergenStatus: 'KNOWN', allergens: [value] } }));
+  const incompleteConfirmation = compositor.composeFinalLabelPreview({ ...hydrate(recipe), ingredients: knownItems, confirmedAllergens: ['LEITE'] }, null);
+  assert.equal(JSON.stringify(incompleteConfirmation.allergens), JSON.stringify(['LEITE', 'TRIGO']));
+  assert.equal(incompleteConfirmation.allergenStatus, 'UNKNOWN');
+  assert.equal(pdf.assessFinalLabelPdf(incompleteConfirmation, 'CINTA').allowed, false);
+  const completeConfirmation = compositor.composeFinalLabelPreview({ ...hydrate(recipe), ingredients: knownItems, confirmedAllergens: ['LEITE', 'TRIGO'] }, null);
+  assert.equal(completeConfirmation.allergenStatus, 'KNOWN');
+  assert.equal(completeConfirmation.status, 'READY');
+  const mixedUnknown = compositor.composeFinalLabelPreview({ ...hydrate(recipe), ingredients: [...knownItems, { ...knownItems[0], ingredient: { ...ingredient, allergenStatus: 'UNKNOWN', allergens: null } }], confirmedAllergens: ['LEITE', 'TRIGO'] }, null);
+  assert.equal(pdf.assessFinalLabelPdf(mixedUnknown, 'CINTA').allowed, false);
   const renderedPdf = await pdf.renderFinalLabelPdf(ready, 'CINTA', 'ESSENCIAL');
+  const measuredFit = { ...ready, ingredientsText: 'INGREDIENTES: ' + 'Ingrediente '.repeat(20) };
+  assert.equal(load('apps/web/src/lib/final-label/visual.ts').assessLabelLayout(measuredFit, 'CINTA').warning, 'CONTENT_OVERFLOW');
+  assert.equal(pdf.assessFinalLabelPdf(measuredFit, 'CINTA').allowed, true, 'PDF measured fit overrides HTML area estimate');
   assert.equal(renderedPdf.status, 'READY');
   assert.equal(renderedPdf.buffer.subarray(0, 5).toString(), '%PDF-');
   const barcodeDomain = load('apps/web/src/lib/barcodes/domain.ts');
@@ -204,6 +219,14 @@ async function main() {
   assert.equal(used, 1); assert.equal(barcodes.length, 1); assert.equal(JSON.stringify(ingredients), originalIngredients);
   const unknownNutrient = compositor.composeFinalLabelPreview({ ...hydrate(recipe), ingredients: [{ ...hydrate(recipe).ingredients[0], ingredient: { ...ingredient, sodiumMg: null } }] }, barcodes[0]);
   assert.equal(unknownNutrient.nutritionTable.rows.find(row => row.nutrient === 'sodiumMg').per100Value, null);
+  assert(unknownNutrient.issues.some(issue => issue.code === 'NUTRIENT_sodiumMg' && issue.message.includes(ingredient.name) && issue.message.includes('dado não informado')));
+  const exemptUnknown = compositor.composeFinalLabelPreview({ ...hydrate(recipe), ingredients: [{ ...hydrate(recipe).ingredients[0], ingredient: { ...ingredient, sodiumMg: null } }] }, null, { packagingCondition: 'PACKED_AT_POINT_OF_SALE_AT_CONSUMER_REQUEST' });
+  assert.equal(exemptUnknown.frontOfPack.applicability.status, 'NOT_APPLICABLE');
+  assert(!exemptUnknown.issues.some(issue => issue.code === 'FRONT_LABEL_UNKNOWN'));
+  assert.equal(exemptUnknown.status, 'INCOMPLETE', 'Mandatory nutrition still blocks');
+  const declarationReview = compositor.composeFinalLabelPreview({ ...hydrate(recipe), ingredients: [{ ...hydrate(recipe).ingredients[0], ingredient: { ...ingredient, transFatG: '0.01', allergenStatus: 'NONE' } }] }, null);
+  assert(declarationReview.issues.some(issue => issue.code === 'NUTRIENT_transFatG' && issue.message.includes('revisão regulatória')));
+  assert(!declarationReview.issues.some(issue => issue.code === 'NUTRIENT_transFatG' && issue.message.includes('dado não informado')));
   const frame = load('apps/web/src/app/rotulo-final/visual-preview.tsx').VisualLabelFrame;
   const partialHtml = renderToStaticMarkup(React.createElement(frame, { preview: partial, format: 'CINTA', template: 'ESSENCIAL' }));
   assert(partialHtml.includes('Maçã') && partialHtml.includes('Valores disponíveis') && partialHtml.includes('O que falta para finalizar'));
@@ -277,6 +300,7 @@ async function main() {
   assert.equal(recipes.length, 2, 'Reopening/editing pages must not create recipes');
   const pending = load('apps/web/src/lib/final-label/pending.ts').finalLabelPending;
   assert(pending(preview).some(issue => issue.code === 'ALLERGENS_REQUIRE_REVIEW' && issue.href.endsWith('#alergenicos')));
+  assert(pending(preview, 'POUCH', 'CLEAN').find(issue => issue.code === 'ALLERGENS_REQUIRE_REVIEW').href.includes('format=POUCH&template=CLEAN'));
   const incompletePending = pending({ ...partial, glutenStatus: null, lactoseStatus: 'NEEDS_REVIEW', crossContaminationRisk: 'UNKNOWN', issues: [{ code: 'MISSING_REQUIRED_DECLARATION', severity: 'BLOCK', message: 'Review' }] });
   for (const code of ['GLUTEN_PENDING', 'LACTOSE_PENDING', 'PROCESS_PENDING']) assert(incompletePending.some(issue => issue.code === code));
   assert(!pending(ready).some(issue => issue.code.endsWith('_PENDING')));
@@ -311,6 +335,19 @@ async function main() {
   const informationPage = await load('apps/web/src/app/receitas/[recipeId]/informacoes/page.tsx').default({ params: Promise.resolve({ recipeId: recipe.id }), searchParams: Promise.resolve({ returnTo: 'label' }) });
   for (const id of ['gluten', 'lactose']) assert.equal(elements(informationPage).find(e => e.props.id === id).props.open, false, 'Already confirmed data should not demand repeated answers');
   assert.equal(field(informationPage, 'returnTo').props.value, 'label');
+  let selectionQuery = new URLSearchParams('format=POUCH&template=CLEAN');
+  let restoredHref;
+  mocks['next/navigation'].useSearchParams = () => selectionQuery;
+  mocks['next/navigation'].useRouter = () => ({ replace: href => { restoredHref = href; } });
+  const memory = harness(load('apps/web/src/app/rotulo-final/selection-memory.tsx').LabelSelectionMemory, { recipeId: recipe.id });
+  memory.render(); memory.flush();
+  selectionQuery = new URLSearchParams(`recipeId=${recipe.id}`);
+  memory.render(); memory.flush();
+  assert.equal(restoredHref, `/rotulo-final?recipeId=${recipe.id}&format=POUCH&template=CLEAN`);
+  selectionStorage.set(`rotula-label-selection:${recipe.id}`, JSON.stringify({ format: 'INVALID', template: 'INVALID' }));
+  selectionQuery = new URLSearchParams(`recipeId=${recipe.id}`);
+  memory.render(); memory.flush();
+  assert.equal(restoredHref, `/rotulo-final?recipeId=${recipe.id}&format=CINTA&template=ESSENCIAL`);
   assert.equal(JSON.stringify(recipes), savedRecipe);
   console.log('STAGE 3 OK: progressive preview, actionable specific pending fields, saved recipes unchanged, process risk without default NO, conditional details, UNKNOWN/PDF/overflow preserved; no DB connection.');
   console.log('STAGE 2 OK: same-recipe identity/composition, edit/remove, atomic yield+packaging validation, liquid/bulk, old edit route, unsaved-data guard, inline CUSTOM return, ownership and UNKNOWN/null/zero; no DB connection.');

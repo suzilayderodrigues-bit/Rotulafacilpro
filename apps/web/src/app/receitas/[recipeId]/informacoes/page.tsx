@@ -1,5 +1,6 @@
 import { RecipeSteps } from "@/components/layout/recipe-steps";
 import Link from "next/link";
+import { labelPreviewHref, resolveLabelFormat, resolveLabelTemplate } from "@/lib/final-label/visual";
 import { ArrowLeft, ClipboardList } from "lucide-react";
 import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, EmptyState, Input, Label, Toast } from "@/components/design-system";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -139,6 +140,8 @@ export default async function RecipeInformationStepPage({ params, searchParams }
             <form action={updateRecipeInformationAction} className="space-y-5">
               <input type="hidden" name="recipeId" value={recipe.id} />
               <input type="hidden" name="returnTo" value={query.returnTo === "label" ? "label" : ""} />
+              <input type="hidden" name="format" value={resolveLabelFormat(typeof query.format === "string" ? query.format : undefined)} />
+              <input type="hidden" name="template" value={resolveLabelTemplate(typeof query.template === "string" ? query.template : undefined)} />
 
               <details id="enquadramento" open={!recipe.regulatoryCategory || !recipe.packagingCondition || (recipe.packagingCondition === "PACKAGED_IN_ABSENCE_OF_CONSUMER" && (!recipe.mainPanelWidthCm || !recipe.mainPanelHeightCm)) || (conditionalAnnexXviCategories.includes(recipe.regulatoryCategory) && [recipe.addedSugarsAddition, recipe.saturatedFatAddition, recipe.sodiumAddition].some(value => !value || value === "UNKNOWN"))} className="rounded border bg-white p-3">
               <summary className="cursor-pointer text-sm font-semibold">Tipo de produto e embalagem · conferir ou editar</summary>
@@ -258,7 +261,7 @@ export default async function RecipeInformationStepPage({ params, searchParams }
                 </label>
 
                 <div className="mt-5 flex flex-col gap-3 border-t border-[var(--border)] pt-5 sm:flex-row sm:justify-between">
-                  <Link href={query.returnTo === "label" ? `/rotulo-final?recipeId=${encodeURIComponent(recipe.id)}` : "/receitas/" + recipe.id + "/rendimento"} className="inline-flex h-10 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white px-4 text-sm font-semibold text-[var(--brand-petrol)] transition hover:bg-[var(--surface-muted)]">
+                  <Link href={query.returnTo === "label" ? labelPreviewHref(recipe.id, resolveLabelFormat(typeof query.format === "string" ? query.format : undefined), resolveLabelTemplate(typeof query.template === "string" ? query.template : undefined)) : "/receitas/" + recipe.id + "/rendimento"} className="inline-flex h-10 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white px-4 text-sm font-semibold text-[var(--brand-petrol)] transition hover:bg-[var(--surface-muted)]">
                     Voltar
                   </Link>
                   <Button type="submit" className="sm:min-w-40">{query.returnTo === "label" ? "Salvar e atualizar meu rótulo" : "Salvar revisão e ver resumo"}</Button>

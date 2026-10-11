@@ -1,9 +1,11 @@
 import type { FinalLabelPreview } from "./preview";
+import { resolveLabelFormat, resolveLabelTemplate } from "./visual";
 
 // Presentation only: the compositor remains responsible for all blocking decisions.
-export function finalLabelPending(preview: FinalLabelPreview) {
+export function finalLabelPending(preview: FinalLabelPreview, format?: string, template?: string) {
   const recipe = `/receitas/${encodeURIComponent(preview.recipeId)}`;
-  const review = `${recipe}/informacoes?returnTo=label`;
+  const context = new URLSearchParams({ returnTo: "label", format: resolveLabelFormat(format), template: resolveLabelTemplate(template) });
+  const review = `${recipe}/informacoes?${context}`;
   const destinations: Record<string, [string, string]> = {
     MISSING_NET_QUANTITY: ["Informe quanto vai em cada embalagem.", `${recipe}/rendimento`],
     MISSING_INGREDIENTS: ["Adicione os ingredientes e as quantidades usadas.", `${recipe}/ingredientes`],
@@ -18,7 +20,7 @@ export function finalLabelPending(preview: FinalLabelPreview) {
   };
   const pending = preview.issues.filter(issue => issue.severity !== "WARNING").map(issue => ({
     ...issue, message: destinations[issue.code]?.[0] ?? issue.message,
-    href: destinations[issue.code]?.[1] ?? review
+    href: issue.code.startsWith("NUTRIENT_") ? `${recipe}/ingredientes?${context}` : destinations[issue.code]?.[1] ?? review
   }));
   const declaration = pending.find(issue => issue.code === "MISSING_REQUIRED_DECLARATION" || issue.code === "DECLARATION_REQUIRES_REVIEW");
   if (declaration) {

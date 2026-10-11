@@ -70,7 +70,12 @@ export function composeFinalLabelPreview(recipe: Recipe, barcode: Barcode | null
   }
 
   const hasUnknownAllergens = recipe.ingredients.some(({ ingredient }) => resolveIngredientAllergenState(ingredient) === "UNKNOWN");
-  const knownButUnconfirmed = recipe.confirmedAllergens.length === 0 && recipe.ingredients.some(({ ingredient }) => resolveIngredientAllergenState(ingredient) === "KNOWN");
+  const normalizeAllergen = (value: string) => value.trim().replace(/\s+/g, " ").toLocaleUpperCase("pt-BR");
+  const knownAllergens = recipe.ingredients.flatMap(({ ingredient }) =>
+    resolveIngredientAllergenState(ingredient) === "KNOWN" ? ingredient.allergens ?? [] : []).map(normalizeAllergen);
+  const confirmedAllergens = recipe.confirmedAllergens.map(normalizeAllergen);
+  const allergens = [...new Set([...knownAllergens, ...confirmedAllergens])];
+  const knownButUnconfirmed = knownAllergens.some(value => !confirmedAllergens.includes(value));
   const allergenStatus: IngredientAllergenState = hasUnknownAllergens || knownButUnconfirmed ? "UNKNOWN"
     : recipe.confirmedAllergens.length ? "KNOWN" : "NONE";
   if (allergenStatus === "UNKNOWN") {
@@ -102,11 +107,19 @@ export function composeFinalLabelPreview(recipe: Recipe, barcode: Barcode | null
       evaluateFrontOfPack(raw)
     );
     const perServing = calculateNutritionPerServing(raw, recipe.servingSize, expectedUnit);
-    nutritionTable = buildNutritionTableViewModel(formatNutritionForDeclaration(perServing), {
+    const declaration = formatNutritionForDeclaration(perServing);
+    nutritionTable = buildNutritionTableViewModel(declaration, {
       householdMeasure: recipe.householdMeasure,
       servingsPerPackage: recipe.servingsPerPackage,
       isIndividualPackage: recipe.isIndividualPackage
     });
+    for (const row of nutritionTable.rows) {
+      const absent = recipe.ingredients.filter(({ ingredient }) => ingredient[row.nutrient] === null || ingredient[row.nutrient] === undefined);
+      if (absent.length) add(`NUTRIENT_${row.nutrient}`, "BLOCK", `${row.label}: dado não informado na fonte de ${absent.map(({ ingredient }) => ingredient.name).join(", ")}. Confira a ficha do ingrediente; informação desconhecida não é zero.`);
+      else if (declaration.nutrients[row.nutrient].per100.requiresNonSignificantReview || declaration.nutrients[row.nutrient].perServing.requiresNonSignificantReview) {
+        add(`NUTRIENT_${row.nutrient}`, "REVIEW", `${row.label}: os dados dos ingredientes estão disponíveis, mas a declaração de quantidade não significativa precisa de revisão regulatória.`);
+      }
+    }
   } catch (error) {
     if (!(error instanceof NutritionCalculationError)) throw error;
     add("NUTRITION_UNAVAILABLE", "BLOCK", "Informe ingredientes e rendimento final válidos para calcular a tabela e a lupa.");
@@ -120,7 +133,7 @@ export function composeFinalLabelPreview(recipe: Recipe, barcode: Barcode | null
   if (frontOfPack?.applicability.status === "REQUIRES_REVIEW") {
     add("FRONT_LABEL_REQUIRES_REVIEW", "REVIEW", "Revise o enquadramento da rotulagem frontal antes de concluir o rótulo.");
   }
-  if (frontOfPack?.hasUnknownData) {
+  if (frontOfPack?.hasUnknownData && frontOfPack.applicability.status !== "NOT_APPLICABLE") {
     add("FRONT_LABEL_UNKNOWN", "BLOCK", "Faltam dados para avaliar todos os nutrientes da lupa frontal.");
   }
 
@@ -142,7 +155,7 @@ export function composeFinalLabelPreview(recipe: Recipe, barcode: Barcode | null
   return {
     recipeId: recipe.id, name: recipe.name, physicalState: recipe.physicalState,
     netQuantityLabel, ingredients, ingredientsText,
-    allergens: recipe.confirmedAllergens, allergenStatus, glutenStatus: recipe.glutenStatus,
+    allergens, allergenStatus, glutenStatus: recipe.glutenStatus,
     lactoseStatus: recipe.lactoseStatus, crossContaminationRisk: recipe.crossContaminationRisk,
     crossContaminationAllergens: recipe.crossContaminationAllergens,
     nutritionTable, frontOfPack, barcode: barcodePreview, issues, status

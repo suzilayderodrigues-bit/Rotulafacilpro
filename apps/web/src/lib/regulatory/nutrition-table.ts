@@ -157,7 +157,7 @@ export function buildNutritionTableViewModel(
       ? "Defina a porção e os dados da embalagem para gerar a tabela nutricional."
       : status === "COMPLETE"
         ? "Dados nutricionais completos para gerar a tabela."
-        : "Alguns valores nutricionais obrigatórios ainda não estão disponíveis na base.",
+        : "Há dados nutricionais ausentes ou declarações que precisam de revisão regulatória. Confira as pendências de cada nutriente.",
     configurationRequired,
     basisLabel: declaration.basis === "100ml" ? "100 ml" : "100 g",
     servingLabel:

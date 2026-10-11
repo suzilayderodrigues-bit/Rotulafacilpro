@@ -3,7 +3,6 @@ import { renderBarcodePng } from "@/lib/barcodes/render";
 import type { NutritionTableRow } from "@/lib/regulatory";
 import type { FinalLabelPreview } from "./preview";
 import {
-  assessLabelLayout,
   labelFormats,
   type LabelFormat,
   type LabelTemplate
@@ -108,9 +107,8 @@ export function assessFinalLabelPdf(preview: FinalLabelPreview, format: LabelFor
   if (preview.status === "REQUIRES_REVIEW") {
     return { allowed: false, code: "REQUIRES_REVIEW", message: "Conclua os pontos marcados para revisão antes de baixar o PDF." };
   }
-  const existingLayout = assessLabelLayout(preview, format);
   const pdfLayout = measureLayout(preview, format);
-  if (existingLayout.warning === "CONTENT_OVERFLOW" || pdfLayout.requiredHeight > pdfLayout.pageHeight) {
+  if (pdfLayout.requiredHeight > pdfLayout.pageHeight) {
     return { allowed: false, code: "CONTENT_OVERFLOW", message: "O conteúdo não cabe neste formato sem cortes. Escolha um formato maior ou reduza o conteúdo na receita." };
   }
   return { allowed: true, code: null, message: null };

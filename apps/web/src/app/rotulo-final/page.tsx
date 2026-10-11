@@ -8,6 +8,8 @@ import { FrontOfPackNutritionPreview } from "@/components/nutrition/front-of-pac
 import { requireUser } from "@/lib/auth/session";
 import { buildFinalLabelPreview } from "@/lib/final-label/preview";
 import { finalLabelPending } from "@/lib/final-label/pending";
+import { Suspense } from "react";
+import { LabelSelectionMemory } from "./selection-memory";
 import { prepareFinalLabelProduction } from "@/lib/final-label/production";
 import { assessLabelLayout, labelFormats, labelPreviewHref, labelTemplates, resolveLabelFormat, resolveLabelTemplate } from "@/lib/final-label/visual";
 import { listRecipes } from "@/lib/recipes/repository";
@@ -42,6 +44,7 @@ export default async function FinalLabelPage({ searchParams }: {
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+      {preview ? <Suspense fallback={null}><LabelSelectionMemory recipeId={preview.recipeId} /></Suspense> : null}
       <Topbar />
       <div className="flex flex-col lg:flex-row">
         <Sidebar activeItem="Rótulo Final" />
@@ -80,7 +83,7 @@ export default async function FinalLabelPage({ searchParams }: {
                   <>
                   <Card className="shadow-none" id="pendencias">
                     <CardHeader className="flex-col"><CardTitle>O que falta para finalizar</CardTitle><CardDescription>A prévia abaixo já mostra os dados disponíveis. Depois de salvar uma informação, ela será atualizada.</CardDescription></CardHeader>
-                    {finalLabelPending(preview).length ? <ul className="space-y-3">{finalLabelPending(preview).map(issue => <li key={issue.code} className="rounded border p-3 text-sm"><p>{issue.message}</p><Link href={issue.href} className="mt-2 inline-flex min-h-11 items-center font-semibold text-[var(--brand-petrol)] underline">Resolver esta pendência</Link></li>)}</ul> : <p className="text-sm">As informações obrigatórias estão completas. Confira a prévia e o espaço do formato escolhido.</p>}
+                    {finalLabelPending(preview, format, template).length ? <ul className="space-y-3">{finalLabelPending(preview, format, template).map(issue => <li key={issue.code} className="rounded border p-3 text-sm"><p>{issue.message}</p><Link href={issue.href} className="mt-2 inline-flex min-h-11 items-center font-semibold text-[var(--brand-petrol)] underline">Resolver esta pendência</Link></li>)}</ul> : <p className="text-sm">As informações obrigatórias estão completas. Confira a prévia e o espaço do formato escolhido.</p>}
                     {preview.issues.some(issue => issue.severity === "WARNING") ? <details className="mt-4 text-sm"><summary className="cursor-pointer">Observações opcionais</summary><ul className="mt-2 space-y-2">{preview.issues.filter(issue => issue.severity === "WARNING").map(issue => <li key={issue.code}>{issue.message}</li>)}</ul></details> : null}
                   </Card>
                   <details className="rounded border bg-white p-4">
