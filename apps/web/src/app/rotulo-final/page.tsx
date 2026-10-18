@@ -7,7 +7,7 @@ import { NutritionFactsTable } from "@/components/nutrition/nutrition-facts-tabl
 import { FrontOfPackNutritionPreview } from "@/components/nutrition/front-of-pack-nutrition-preview";
 import { requireUser } from "@/lib/auth/session";
 import { buildFinalLabelPreview } from "@/lib/final-label/preview";
-import { finalLabelPending } from "@/lib/final-label/pending";
+import { groupedFinalLabelPending } from "@/lib/final-label/pending";
 import { ingredientComplementHref } from "@/lib/ingredients/complement";
 import { Suspense } from "react";
 import { LabelSelectionMemory } from "./selection-memory";
@@ -42,6 +42,7 @@ export default async function FinalLabelPage({ searchParams }: {
   const preview = selectedRecipeId ? await buildFinalLabelPreview(selectedRecipeId, user.id) : null;
   const layout = preview ? assessLabelLayout(preview, format) : null;
   const production = preview ? prepareFinalLabelProduction(preview, format, template) : null;
+  const pendingGroups = preview ? groupedFinalLabelPending(preview, format, template) : [];
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
@@ -82,14 +83,8 @@ export default async function FinalLabelPage({ searchParams }: {
                   <EmptyState title="Receita não encontrada" description="A receita solicitada não está disponível nesta conta. Selecione uma das suas receitas acima." />
                 ) : (
                   <>
-                  <Card className="shadow-none" id="pendencias">
-                    <CardHeader className="flex-col"><CardTitle>O que falta para finalizar</CardTitle><CardDescription>A prévia abaixo já mostra os dados disponíveis. Depois de salvar uma informação, ela será atualizada.</CardDescription></CardHeader>
-                    {finalLabelPending(preview, format, template).length ? <ul className="space-y-3">{finalLabelPending(preview, format, template).map(issue => <li key={issue.code} className="rounded border p-3 text-sm"><p>{issue.message}</p><Link href={issue.href} className="mt-2 inline-flex min-h-11 items-center font-semibold text-[var(--brand-petrol)] underline">Resolver esta pendência</Link></li>)}</ul> : <p className="text-sm">As informações obrigatórias estão completas. Confira a prévia e o espaço do formato escolhido.</p>}
-                    {preview.issues.some(issue => issue.severity === "WARNING") ? <details className="mt-4 text-sm"><summary className="cursor-pointer">Observações opcionais</summary><ul className="mt-2 space-y-2">{preview.issues.filter(issue => issue.severity === "WARNING").map(issue => <li key={issue.code}>{issue.message}</li>)}</ul></details> : null}
-                    {preview.ingredientCompletions?.length ? <section className="mt-4 space-y-3" id="completar-ingredientes"><h3 className="font-semibold">Completar dados dos ingredientes</h3><p className="text-sm">Preencha apenas o que a fonte informa, em uma cópia privada. Esta lista também pode incluir nutrientes opcionais; os bloqueios obrigatórios estão indicados acima.</p><ul className="space-y-3">{preview.ingredientCompletions.map(item => <li key={item.itemId} className="rounded border p-3 text-sm"><p className="font-semibold">{item.name}</p><p className="mt-1">Não informado: {item.missing.join(", ")}.</p><Link href={ingredientComplementHref(preview.recipeId, item.itemId, format, template)} className="inline-flex min-h-11 items-center font-semibold underline">Completar somente o que falta</Link></li>)}</ul></section> : null}
-                  </Card>
-                  <details className="rounded border bg-white p-4">
-                    <summary className="cursor-pointer font-semibold">Modelo e tamanho · {labelTemplates[template].name} · {labelFormats[format].widthMm} × {labelFormats[format].heightMm} mm</summary>
+                  <section aria-label="Modelo e tamanho" className="rounded border bg-white p-4">
+                    <h2 className="font-semibold">Modelo e tamanho · {labelTemplates[template].name} · {labelFormats[format].widthMm} × {labelFormats[format].heightMm} mm</h2>
                   <Card className="mt-4 shadow-none">
                     <CardHeader className="flex-col"><CardTitle>Formato físico</CardTitle><CardDescription>Escolha o tamanho inicial da prévia. Confirme as medidas reais da sua embalagem antes de produzir.</CardDescription></CardHeader>
                     <div className="grid gap-3 sm:grid-cols-3">
@@ -116,12 +111,12 @@ export default async function FinalLabelPage({ searchParams }: {
                       })}
                     </div>
                   </Card>
-                  </details>
+                  </section>
                   <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.8fr)]">
                     <Card className="min-w-0 shadow-none">
-                      <CardHeader className="flex-col"><CardTitle>Prévia técnica do rótulo</CardTitle><CardDescription>{labelFormats[format].name} · {labelFormats[format].widthMm} × {labelFormats[format].heightMm} mm · {labelTemplates[template].name}. Mapa visual, não arquivo para impressão.</CardDescription></CardHeader>
+                      <CardHeader className="flex-col"><CardTitle>{production?.allowed ? "Prévia · PDF disponível" : "Prévia parcial · PDF ainda bloqueado"}</CardTitle><CardDescription>{labelFormats[format].name} · {labelFormats[format].widthMm} × {labelFormats[format].heightMm} mm · {labelTemplates[template].name}. Mapa visual, não arquivo para impressão.</CardDescription></CardHeader>
                       <VisualLabelFrame preview={preview} format={format} template={template} />
-                      <details className="mt-6"><summary className="cursor-pointer text-sm font-semibold">Ver informações completas</summary>
+                      <section className="mt-6" aria-label="Informações do produto e tabela nutricional">
                       <div className="min-w-0 space-y-5 rounded-[var(--radius-md)] border-2 border-[var(--border-strong)] bg-white p-4 sm:p-6">
                         <div className="border-b border-[var(--border)] pb-4">
                           <h2 className="break-words text-2xl font-bold">{preview.name}</h2>
@@ -152,7 +147,7 @@ export default async function FinalLabelPage({ searchParams }: {
                           ) : <div className="text-sm"><p>Código de barras ainda não associado.</p><Link href={`/codigo-de-barras?recipeId=${encodeURIComponent(preview.recipeId)}`} className="mt-2 inline-flex font-semibold text-[var(--brand-petrol)] underline">Adicionar código de barras</Link></div>}
                         </section>
                       </div>
-                      </details>
+                      </section>
                     </Card>
 
                     <aside className="min-w-0 space-y-4">
@@ -192,6 +187,12 @@ export default async function FinalLabelPage({ searchParams }: {
                       <Link href={`/receitas/${preview.recipeId}/editar`} className="inline-flex h-10 w-full items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-white px-4 text-sm font-semibold text-[var(--brand-petrol)]">Editar receita</Link>
                     </aside>
                   </div>
+                  <Card className="shadow-none" id="pendencias">
+                    <CardHeader className="flex-col"><CardTitle>O que falta para finalizar</CardTitle><CardDescription>Resolva somente as informações obrigatórias indicadas. A prévia usa os dados disponíveis.</CardDescription></CardHeader>
+                    {pendingGroups.length ? <div className="space-y-4">{pendingGroups.map(group => <section key={group.title}><h3 className="font-semibold">{group.title}</h3><ul className="mt-2 space-y-2">{group.items.map(issue => <li key={issue.code} className="rounded border p-3 text-sm"><p>{issue.message}</p><Link href={issue.href} className="mt-2 inline-flex min-h-11 items-center font-semibold underline">Resolver esta pendência</Link></li>)}</ul></section>)}</div> : <p className="text-sm">Informações obrigatórias conferidas. Verifique também se o conteúdo cabe no formato escolhido.</p>}
+                    {preview.issues.some(issue => issue.severity === "WARNING") ? <details className="mt-4 text-sm"><summary className="cursor-pointer">Observações opcionais</summary><ul className="mt-2 space-y-2">{preview.issues.filter(issue => issue.severity === "WARNING").map(issue => <li key={issue.code}>{issue.message}</li>)}</ul></details> : null}
+                    {preview.ingredientCompletions?.length ? <details className="mt-4 space-y-3" id="completar-ingredientes"><summary className="min-h-11 cursor-pointer py-2 font-semibold">Opções de complementação dos ingredientes</summary><p className="text-sm">Preencha apenas o que a fonte informa, em uma cópia privada. Esta lista também pode incluir nutrientes opcionais; os bloqueios obrigatórios estão indicados acima.</p><ul className="space-y-3">{preview.ingredientCompletions.map(item => <li key={item.itemId} className="rounded border p-3 text-sm"><p className="font-semibold">{item.name}</p><p className="mt-1">Não informado: {item.missing.join(", ")}.</p><Link href={ingredientComplementHref(preview.recipeId, item.itemId, format, template)} className="inline-flex min-h-11 items-center font-semibold underline">Completar somente o que falta</Link></li>)}</ul></details> : null}
+                  </Card>
                   </>
                 )}
               </>

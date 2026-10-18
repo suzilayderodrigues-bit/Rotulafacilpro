@@ -34,3 +34,25 @@ export function finalLabelPending(preview: FinalLabelPreview, format?: string, t
   }
   return pending;
 }
+
+// Group presentation only. The compositor and PDF assessment keep every blocking rule.
+export function groupedFinalLabelPending(preview: FinalLabelPreview, format?: string, template?: string) {
+  const pending = finalLabelPending(preview, format, template);
+  const hasNutrientDetails = pending.some(issue => issue.code.startsWith("NUTRIENT_"));
+  const hasDeclarationDetails = pending.some(issue => issue.code.endsWith("_PENDING"));
+  const groups = new Map<string, typeof pending>();
+  for (const issue of pending) {
+    // These summaries repeat the specific fields shown below; their blocking decisions remain untouched.
+    if (issue.code === "INCOMPLETE_NUTRITION" && hasNutrientDetails) continue;
+    if (["MISSING_REQUIRED_DECLARATION", "DECLARATION_REQUIRES_REVIEW"].includes(issue.code) && hasDeclarationDetails) continue;
+    const title = issue.code.startsWith("NUTRIENT_") || ["INCOMPLETE_NUTRITION", "FRONT_LABEL_UNKNOWN"].includes(issue.code)
+      ? "Dados nutricionais"
+      : issue.code.startsWith("FRONT_LABEL_") ? "Avaliação da lupa"
+      : /ALLERGEN|DECLARATION|GLUTEN|LACTOSE|PROCESS/.test(issue.code) ? "Declarações do produto"
+      : "Receita e embalagem";
+    const items = groups.get(title) ?? [];
+    if (!items.some(item => item.message === issue.message && item.href === issue.href)) items.push(issue);
+    groups.set(title, items);
+  }
+  return [...groups].map(([title, items]) => ({ title, items }));
+}

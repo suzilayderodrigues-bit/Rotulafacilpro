@@ -1,4 +1,4 @@
-﻿import { RecipeSteps } from "@/components/layout/recipe-steps";
+import { RecipeSteps } from "@/components/layout/recipe-steps";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import {
@@ -78,7 +78,7 @@ function RecipeIngredientRow({ item, recipeId, format, template }: { item: Recip
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-[var(--foreground)]">{item.ingredient.name}</h3>
           <p className="mt-1 text-xs font-medium text-[var(--muted)]">{sourceLabel(item.ingredient.source)}</p>
-          {missingIngredientInformation(item.ingredient).length ? <Link href={ingredientComplementHref(recipeId, item.id, format, template)} className="inline-flex min-h-11 items-center text-sm font-semibold underline">Completar informações ausentes nesta receita</Link> : null}
+          {missingIngredientInformation(item.ingredient).length ? <details className="mt-2 text-sm"><summary className="min-h-11 cursor-pointer py-2 text-[var(--muted)]">Mais opções deste ingrediente</summary><Link href={ingredientComplementHref(recipeId, item.id, format, template)} className="inline-flex min-h-11 items-center font-semibold underline">Complementar informações nesta receita</Link></details> : null}
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <form action={updateRecipeIngredientAction} className="flex flex-wrap items-center gap-2">
@@ -155,11 +155,10 @@ export default async function RecipeIngredientsStepPage({ params, searchParams }
                 <span className="size-1.5 rounded-full bg-[var(--accent-orange)]" />
                 Minha receita
               </Badge>
-              <h1 className="mt-4 text-2xl font-semibold tracking-normal text-[var(--foreground)] sm:text-3xl">Minha receita</h1>
+              <h1 className="mt-4 text-2xl font-semibold tracking-normal text-[var(--foreground)] sm:text-3xl">{recipe.name}</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)] sm:text-base">
                 Adicione os ingredientes e informe quanto você usa nesta receita.
               </p>
-              <p className="mt-3 text-sm font-semibold text-[var(--brand-petrol)]">{recipe.name}</p>
             </section>
 
             {status ? (

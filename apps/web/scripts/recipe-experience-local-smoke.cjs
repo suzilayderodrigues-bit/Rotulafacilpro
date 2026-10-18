@@ -304,6 +304,19 @@ async function main() {
   const incompletePending = pending({ ...partial, glutenStatus: null, lactoseStatus: 'NEEDS_REVIEW', crossContaminationRisk: 'UNKNOWN', issues: [{ code: 'MISSING_REQUIRED_DECLARATION', severity: 'BLOCK', message: 'Review' }] });
   for (const code of ['GLUTEN_PENDING', 'LACTOSE_PENDING', 'PROCESS_PENDING']) assert(incompletePending.some(issue => issue.code === code));
   assert(!pending(ready).some(issue => issue.code.endsWith('_PENDING')));
+  const groupedPending = load('apps/web/src/lib/final-label/pending.ts').groupedFinalLabelPending;
+  const pendingFixture = { ...partial, issues: [
+    { code: 'INCOMPLETE_NUTRITION', severity: 'BLOCK', message: 'Summary' },
+    { code: 'NUTRIENT_sugarsG', severity: 'BLOCK', message: 'Açúcares: fonte desconhecida' },
+    { code: 'ALLERGENS_REQUIRE_REVIEW', severity: 'REVIEW', message: 'UNKNOWN' }
+  ] };
+  const pendingSnapshot = JSON.stringify(pendingFixture);
+  const grouped = groupedPending(pendingFixture, 'POUCH', 'CLEAN');
+  assert(!grouped.flatMap(group => group.items).some(issue => issue.code === 'INCOMPLETE_NUTRITION'));
+  assert(grouped.flatMap(group => group.items).some(issue => issue.code === 'NUTRIENT_sugarsG'));
+  assert(grouped.flatMap(group => group.items).some(issue => issue.code === 'ALLERGENS_REQUIRE_REVIEW'));
+  assert.equal(JSON.stringify(pendingFixture), pendingSnapshot, 'Grouping must not mutate blocking decisions');
+  assert.equal(groupedPending(ready).length, 0, 'Optional missing fields do not create mandatory tasks');
   const ProcessReview = load('apps/web/src/app/receitas/[recipeId]/informacoes/process-review.tsx').ProcessReview;
   const processReview = harness(ProcessReview, { defaultRisk: null, defaultAllergens: [] });
   tree = processReview.render(); assert(!elements(tree).some(e => e.props.name === 'crossContaminationRisk' && e.props.checked));
@@ -316,6 +329,11 @@ async function main() {
   const labelPage = await load('apps/web/src/app/rotulo-final/page.tsx').default({ searchParams: Promise.resolve({ recipeId: recipe.id }) });
   assert(JSON.stringify(labelPage).includes('O que falta para finalizar'));
   assert(JSON.stringify(labelPage).includes('Resolver esta pendência'));
+  const labelElements = elements(labelPage);
+  assert(labelElements.findIndex(e => e.props.id === 'pendencias') > labelElements.findIndex(e => e.props['aria-label'] === 'Informações do produto e tabela nutricional'));
+  assert(!labelElements.some(e => e.type === 'details' && elements(e).some(child => child.props['aria-label'] === 'Tabela nutricional')), 'Table remains visible without opening details');
+  assert(labelElements.some(e => e.type === 'section' && e.props['aria-label'] === 'Modelo e tamanho'));
+  assert(labelElements.some(e => e.type === 'details' && e.props.id === 'completar-ingredientes'), 'Completion stays secondary');
   assert.equal(JSON.stringify(recipes), savedRecipe, 'Viewing a label must not change saved recipes');
   assert.equal(used, 1); assert.equal(barcodes.length, 1);
   const noneHtml = renderToStaticMarkup(React.createElement(frame, { preview: ready, format: 'CINTA', template: 'ESSENCIAL' }));
