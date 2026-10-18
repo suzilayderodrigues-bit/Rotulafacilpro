@@ -58,6 +58,11 @@ export async function createOfficialBarcodeAction(formData: FormData) {
 export async function createInternalBarcodeAction(formData: FormData) {
   const user = await requireUser();
   const recipeId = recipeIdFromForm(formData);
+  const returnToProduct = formData.get("returnTo") === "product" && recipeId !== null;
+  const productHref = recipeId ? `/receitas/${encodeURIComponent(recipeId)}/rendimento` : null;
+  if (returnToProduct && await findBarcodeByRecipe(user.id, recipeId!)) {
+    redirect(`${productHref}?barcodeStatus=receita-ocupada#codigo-interno`);
+  }
   let status = "erro";
 
   try {
@@ -68,6 +73,7 @@ export async function createInternalBarcodeAction(formData: FormData) {
     else if (isDuplicate(error)) status = await duplicateStatus(user.id, recipeId);
   }
 
+  if (returnToProduct) redirect(`${productHref}?${new URLSearchParams({ barcodeStatus: status })}#codigo-interno`);
   redirect(`${pagePath}?${new URLSearchParams({ status, ...(recipeId && status !== "interno-criado" ? { recipeId } : {}) })}`);
 }
 

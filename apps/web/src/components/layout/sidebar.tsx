@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { Barcode, BookOpen, Database, Home, Menu, Tags, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -9,16 +10,17 @@ export const navigationItems = [
   { label: "Dashboard", href: "/dashboard", icon: Home },
   { label: "Ingredientes", href: "/ingredientes", icon: Database },
   { label: "Receitas", href: "/receitas", icon: BookOpen },
-  { label: "Rótulo Final", href: "/rotulo-final", icon: Tags },
+  { label: "Minha tabela", href: "/rotulo-final", icon: Tags },
   { label: "Código de Barras", href: "/codigo-de-barras", icon: Barcode },
   { label: "Etiquetas", href: "/etiquetas", icon: Tags }
 ] as const;
 
 type SidebarProps = {
   activeItem?: string;
+  recipeId?: string;
 };
 
-function NavigationLinks({ activeItem, onNavigate }: SidebarProps & { onNavigate?: () => void }) {
+function NavigationLinks({ activeItem, recipeId, onNavigate }: SidebarProps & { onNavigate?: () => void }) {
   return navigationItems.map((item) => {
     const Icon = item.icon;
     const isActive = item.label === activeItem;
@@ -26,7 +28,7 @@ function NavigationLinks({ activeItem, onNavigate }: SidebarProps & { onNavigate
     return (
       <Link
         key={item.label}
-        href={item.href}
+        href={item.label === "Minha tabela" && recipeId ? `/rotulo-final?recipeId=${encodeURIComponent(recipeId)}` : item.href}
         onClick={onNavigate}
         aria-current={isActive ? "page" : undefined}
         className={cn(
@@ -42,7 +44,9 @@ function NavigationLinks({ activeItem, onNavigate }: SidebarProps & { onNavigate
   });
 }
 
-export function Sidebar({ activeItem = "Dashboard" }: SidebarProps) {
+export function Sidebar({ activeItem = "Dashboard", recipeId }: SidebarProps) {
+  const params = useParams();
+  const currentRecipeId = recipeId ?? (typeof params.recipeId === "string" ? params.recipeId : undefined);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
@@ -87,7 +91,7 @@ export function Sidebar({ activeItem = "Dashboard" }: SidebarProps) {
               </button>
             </div>
             <nav className="flex flex-col gap-1" aria-label="Navegação principal">
-              <NavigationLinks activeItem={activeItem} onNavigate={() => setMobileOpen(false)} />
+              <NavigationLinks activeItem={activeItem} recipeId={currentRecipeId} onNavigate={() => setMobileOpen(false)} />
             </nav>
           </aside>
         </div>
@@ -96,7 +100,7 @@ export function Sidebar({ activeItem = "Dashboard" }: SidebarProps) {
       <aside className="group hidden min-h-[calc(100vh-3.5rem)] w-16 shrink-0 border-r border-[var(--border)] bg-white transition-all duration-200 hover:w-56 lg:block">
         <nav className="flex flex-col gap-1 p-2" aria-label="Navegação principal">
           <div className="[&_span]:opacity-0 [&_span]:transition-opacity group-hover:[&_span]:opacity-100">
-            <NavigationLinks activeItem={activeItem} />
+            <NavigationLinks activeItem={activeItem} recipeId={currentRecipeId} />
           </div>
         </nav>
       </aside>

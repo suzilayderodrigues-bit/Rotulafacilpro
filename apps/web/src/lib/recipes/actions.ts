@@ -4,12 +4,32 @@ import { redirect } from "next/navigation";
 import { labelPreviewHref, resolveLabelFormat, resolveLabelTemplate } from "@/lib/final-label/visual";
 import { type IngredientBaseUnit, type RecipePhysicalState } from "@rotula-facil-pro/db";
 import { requireUser } from "@/lib/auth/session";
-import { RecipeValidationError } from "./domain";
+import { RecipeValidationError, type RecipeInformationInput } from "./domain";
 import { addRecipeIngredient, createRecipe, deleteRecipe, removeRecipeIngredient, updateRecipe, updateRecipeIngredient, updateRecipeInformation, updateRecipePackaging, updateRecipeYield, updateRecipeProductSetup } from "./repository";
 
 function formString(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";
+}
+
+function informationInputFromForm(formData: FormData): RecipeInformationInput {
+  const selectedAllergens = formData.getAll("confirmedAllergens").filter((value): value is string => typeof value === "string");
+  return {
+      regulatoryCategory: formString(formData, "regulatoryCategory"),
+      packagingCondition: formString(formData, "packagingCondition"),
+      mainPanelWidthCm: formString(formData, "mainPanelWidthCm"),
+      mainPanelHeightCm: formString(formData, "mainPanelHeightCm"),
+      addedSugarsAddition: formString(formData, "addedSugarsAddition"),
+      saturatedFatAddition: formString(formData, "saturatedFatAddition"),
+      sodiumAddition: formString(formData, "sodiumAddition"),
+      confirmedAllergens: selectedAllergens,
+      additionalAllergens: formString(formData, "additionalAllergens"),
+      glutenStatus: formString(formData, "glutenStatus"),
+      lactoseStatus: formString(formData, "lactoseStatus"),
+      crossContaminationRisk: formString(formData, "crossContaminationRisk"),
+      crossContaminationAllergens: formString(formData, "crossContaminationAllergens"),
+      reviewed: formString(formData, "reviewed")
+    };
 }
 
 function recipeType(value: string): RecipePhysicalState | null {
@@ -169,10 +189,11 @@ export async function updateRecipeProductSetupAction(formData: FormData) {
       netQuantity: formString(formData, "netQuantity"), netQuantityUnit,
       servingSize: formString(formData, "servingSize"), servingUnit,
       householdMeasure: formString(formData, "householdMeasure")
-    });
+    }, formString(formData, "productInformation") === "on" ? informationInputFromForm(formData) : undefined);
   } catch (error) {
     const packagingCode = packagingErrorParam(error);
-    const status = packagingCode !== "formulario" ? `embalagem-${packagingCode}` : yieldErrorParam(error);
+    const informationCode = informationErrorParam(error);
+    const status = informationCode !== "formulario" ? informationCode : packagingCode !== "formulario" ? `embalagem-${packagingCode}` : yieldErrorParam(error);
     redirect(recipeYieldHref(recipeId, status));
   }
   redirect("/rotulo-final?recipeId=" + encodeURIComponent(recipeId));
@@ -268,29 +289,14 @@ export async function updateRecipeYieldAction(formData: FormData) {
 export async function updateRecipeInformationAction(formData: FormData) {
   const user = await requireUser();
   const recipeId = formString(formData, "recipeId");
-  const selectedAllergens = formData.getAll("confirmedAllergens").filter((value): value is string => typeof value === "string");
+
 
   if (!recipeId) {
     redirect("/receitas?erro=formulario");
   }
 
   try {
-    await updateRecipeInformation(user.id, recipeId, {
-      regulatoryCategory: formString(formData, "regulatoryCategory"),
-      packagingCondition: formString(formData, "packagingCondition"),
-      mainPanelWidthCm: formString(formData, "mainPanelWidthCm"),
-      mainPanelHeightCm: formString(formData, "mainPanelHeightCm"),
-      addedSugarsAddition: formString(formData, "addedSugarsAddition"),
-      saturatedFatAddition: formString(formData, "saturatedFatAddition"),
-      sodiumAddition: formString(formData, "sodiumAddition"),
-      confirmedAllergens: selectedAllergens,
-      additionalAllergens: formString(formData, "additionalAllergens"),
-      glutenStatus: formString(formData, "glutenStatus"),
-      lactoseStatus: formString(formData, "lactoseStatus"),
-      crossContaminationRisk: formString(formData, "crossContaminationRisk"),
-      crossContaminationAllergens: formString(formData, "crossContaminationAllergens"),
-      reviewed: formString(formData, "reviewed")
-    });
+    await updateRecipeInformation(user.id, recipeId, informationInputFromForm(formData));
   } catch (error) {
     redirect("/receitas/" + recipeId + "/informacoes?status=" + informationErrorParam(error) + (formString(formData, "returnTo") === "label" ? "&" + new URLSearchParams({ returnTo: "label", format: resolveLabelFormat(formString(formData, "format")), template: resolveLabelTemplate(formString(formData, "template")) }) : ""));
   }

@@ -10,21 +10,22 @@ function Submit({ internal }: { internal: boolean }) {
   return <Button type="submit" disabled={pending} className="w-full sm:w-auto">{pending ? "Salvando..." : internal ? "Gerar código interno" : "Validar e salvar"}</Button>;
 }
 
-export function CreateBarcodeForm({ internal, recipes, initialRecipeId }: {
+export function CreateBarcodeForm({ internal, recipes, initialRecipeId, fixedProduct }: {
   internal: boolean;
   recipes: { id: string; name: string }[];
   initialRecipeId?: string;
+  fixedProduct?: { id: string; name: string };
 }) {
-  const [recipeId, setRecipeId] = useState(initialRecipeId ?? "");
+  const [recipeId, setRecipeId] = useState(fixedProduct?.id ?? initialRecipeId ?? "");
   const [gtin, setGtin] = useState("");
   const selectId = internal ? "internal-recipe" : "official-recipe";
   return <form action={internal ? createInternalBarcodeAction : createOfficialBarcodeAction} className="mt-5 space-y-4">
     {!internal ? <div><Label htmlFor="gtin">Código GTIN</Label><Input id="gtin" name="gtin" value={gtin} onChange={event => setGtin(event.target.value)} inputMode="numeric" autoComplete="off" required placeholder="Digite o número do GTIN" /></div> : null}
-    <div><Label htmlFor={selectId}>Produto/receita (opcional)</Label>
+    {fixedProduct ? <><input type="hidden" name="recipeId" value={fixedProduct.id} /><input type="hidden" name="returnTo" value="product" /><p className="text-sm font-semibold">Produto: {fixedProduct.name}</p></> : <div><Label htmlFor={selectId}>Produto/receita (opcional)</Label>
       <select id={selectId} name="recipeId" value={recipeId} onChange={event => setRecipeId(event.target.value)} className="h-10 w-full min-w-0 rounded-[var(--radius-md)] border border-[var(--border)] bg-white px-3 text-sm">
         <option value="">Sem receita associada</option>{recipes.map(recipe => <option key={recipe.id} value={recipe.id}>{recipe.name}</option>)}
       </select>
-    </div>
+    </div>}
     <Submit internal={internal} />
   </form>;
 }

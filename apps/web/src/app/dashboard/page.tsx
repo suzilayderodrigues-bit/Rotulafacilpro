@@ -41,8 +41,8 @@ const shortcuts = [
     icon: Database
   },
   {
-    title: "Gerar rótulo",
-    description: "Veja a prévia técnica do rótulo da sua receita.",
+    title: "Minha tabela",
+    description: "Confira a tabela nutricional e a avaliação da lupa.",
     href: "/rotulo-final",
     icon: Tags
   }
@@ -117,7 +117,7 @@ export default async function DashboardPage() {
                   <CardHeader>
                     <div>
                       <CardTitle>Fluxo principal</CardTitle>
-                      <CardDescription>Cadastre ingredientes, monte a receita e gere o rótulo final.</CardDescription>
+                      <CardDescription>Cadastre ingredientes, monte a receita e confira a tabela nutricional.</CardDescription>
                     </div>
                   </CardHeader>
                   <Link href="/receitas" className={cn(buttonLinkClasses, "w-full sm:w-auto")}>

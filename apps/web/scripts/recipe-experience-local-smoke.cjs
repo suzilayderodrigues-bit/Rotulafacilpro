@@ -93,7 +93,7 @@ mocks['@/lib/auth/session'] = { requireUser: async () => ({ id: userId }), getCu
 mocks['@/components/layout/topbar'] = { Topbar: () => null };
 mocks['@/components/layout/sidebar'] = { Sidebar: () => null };
 mocks['next/navigation'] = { redirect: url => { throw new Redirect(url); }, useRouter: () => ({ replace() {} }) };
-mocks['next/link'] = { default: ({ children, ...props }) => React.createElement('a', props, children) };
+mocks['next/link'] = { __esModule: true, default: ({ children, ...props }) => React.createElement('a', { ...props, prefetch: undefined }, children) };
 mocks['./commercial'] = { BarcodeEntitlementError: EntitlementError, createBarcodeWithEntitlement: async (owner, draft, recipeId) => {
   if (failCreation) throw new EntitlementError('MONTHLY_LIMIT_REACHED');
   assert(recipes.some(row => row.id === recipeId && row.userId === owner));
@@ -207,6 +207,7 @@ async function main() {
   assert.equal(pdf.assessFinalLabelPdf(measuredFit, 'CINTA').allowed, true, 'PDF measured fit overrides HTML area estimate');
   assert.equal(renderedPdf.status, 'READY');
   assert.equal(renderedPdf.buffer.subarray(0, 5).toString(), '%PDF-');
+  await require('./nutrition-table-pdf-local-cases.cjs')({ load, ready, preview, partial, mocks, recipe, compositor, hydrate, ingredient, barcodes, elements });
   const barcodeDomain = load('apps/web/src/lib/barcodes/domain.ts');
   const barcodeRender = load('apps/web/src/lib/barcodes/render.ts');
   for (const length of [8, 12, 13, 14]) {
@@ -326,13 +327,38 @@ async function main() {
   const oldProcess = harness(ProcessReview, { defaultRisk: 'YES', defaultAllergens: ['LEITE'] });
   assert.equal(field(oldProcess.render(), 'crossContaminationAllergens').props.defaultValue, 'LEITE');
   const savedRecipe = JSON.stringify(recipes);
+  const unselectedPage = await load('apps/web/src/app/rotulo-final/page.tsx').default({});
+  assert(!elements(unselectedPage).some(e => e.type === 'a' && String(e.props.href).includes('/tabela/download')), 'No recipe selected implicitly');
+  assert(elements(unselectedPage).some(e => e.props.title === 'Selecione sua receita'));
+  const unknownSelection = await load('apps/web/src/app/rotulo-final/page.tsx').default({ searchParams: Promise.resolve({ recipeId: 'not-owned' }) });
+  assert(!elements(unknownSelection).some(e => e.type === 'a' && String(e.props.href).includes('/tabela/download')), 'Invalid recipe must not fall back');
   const labelPage = await load('apps/web/src/app/rotulo-final/page.tsx').default({ searchParams: Promise.resolve({ recipeId: recipe.id }) });
   assert(JSON.stringify(labelPage).includes('O que falta para finalizar'));
   assert(JSON.stringify(labelPage).includes('Resolver esta pendência'));
   const labelElements = elements(labelPage);
-  assert(labelElements.findIndex(e => e.props.id === 'pendencias') > labelElements.findIndex(e => e.props['aria-label'] === 'Informações do produto e tabela nutricional'));
+  const tablePdfSection = labelElements.find(e => e.props['aria-label'] === 'PDF da tabela nutricional');
+  assert(tablePdfSection);
+  assert(!elements(tablePdfSection).some(e => e.props.href?.includes('/tabela/download')), 'UNKNOWN disables export links on page');
+  assert(labelElements.findIndex(e => e.props.id === 'pendencias') > labelElements.findIndex(e => e.props['aria-label'] === 'Rotulagem frontal'));
   assert(!labelElements.some(e => e.type === 'details' && elements(e).some(child => child.props['aria-label'] === 'Tabela nutricional')), 'Table remains visible without opening details');
-  assert(labelElements.some(e => e.type === 'section' && e.props['aria-label'] === 'Modelo e tamanho'));
+  assert(!labelElements.some(e => e.props['aria-label'] === 'Modelo e tamanho'), 'No editor selectors in main screen');
+  assert(labelElements.some(e => e.type === 'details' && e.props.id === 'rotulo-completo-anterior' && !e.props.open), 'Legacy editor stays collapsed');
+  assert(JSON.stringify(labelPage).includes('Minha tabela'));
+  assert(JSON.stringify(labelPage).includes('não é uma exportação independente'));
+  const steps = load('apps/web/src/components/layout/recipe-steps.tsx').RecipeSteps({ current: 3, recipeId: recipe.id, detail: 'Tabela' });
+  assert(JSON.stringify(steps).includes('Minha tabela'));
+  assert(elements(steps).some(e => e.props.href === '/rotulo-final?recipeId=' + recipe.id));
+  const alternatePage = await load('apps/web/src/app/rotulo-final/page.tsx').default({ searchParams: Promise.resolve({ recipeId: recipe.id, format: 'POUCH', template: 'CLEAN' }) });
+  for (const label of ['Tabela nutricional', 'Rotulagem frontal']) {
+    const original = labelElements.find(e => e.props['aria-label'] === label);
+    const alternate = elements(alternatePage).find(e => e.props['aria-label'] === label);
+    assert.equal(JSON.stringify(original), JSON.stringify(alternate), 'Legacy format/template must not change table or front warning');
+  }
+  const legacy = load('apps/web/src/app/rotulo-final/legacy-label-editor.tsx').LegacyLabelEditor({ preview: ready, format: 'CINTA', template: 'ESSENCIAL' });
+  assert(elements(legacy).some(e => e.props['aria-label'] === 'Modelo e tamanho'));
+  assert(elements(legacy).some(e => e.props.href?.includes('/download?format=CINTA&template=ESSENCIAL')));
+  const blockedLegacy = load('apps/web/src/app/rotulo-final/legacy-label-editor.tsx').LegacyLabelEditor({ preview, format: 'CINTA', template: 'ESSENCIAL' });
+  assert(!elements(blockedLegacy).some(e => e.props.href?.includes('/download?')), 'Legacy PDF remains blocked for unresolved data');
   assert(labelElements.some(e => e.type === 'details' && e.props.id === 'completar-ingredientes'), 'Completion stays secondary');
   assert.equal(JSON.stringify(recipes), savedRecipe, 'Viewing a label must not change saved recipes');
   assert.equal(used, 1); assert.equal(barcodes.length, 1);
@@ -351,8 +377,9 @@ async function main() {
   const conditional = regulatory.evaluateFrontOfPackApplicability({ regulatoryCategory: 'CHEESE' });
   assert.equal(conditional.status, 'REQUIRES_REVIEW');
   const informationPage = await load('apps/web/src/app/receitas/[recipeId]/informacoes/page.tsx').default({ params: Promise.resolve({ recipeId: recipe.id }), searchParams: Promise.resolve({ returnTo: 'label' }) });
-  for (const id of ['gluten', 'lactose']) assert.equal(elements(informationPage).find(e => e.props.id === id).props.open, false, 'Already confirmed data should not demand repeated answers');
+  assert(elements(informationPage).some(e => e.props.recipe?.id === recipe.id), 'Legacy information links reuse the shared product section');
   assert.equal(field(informationPage, 'returnTo').props.value, 'label');
+  await require('./product-information-local-cases.cjs')({ load, harness, elements, field, action, recipe, recipes, ingredients, items, repo, actions, compositor, hydrate, ingredient, mocks });
   let selectionQuery = new URLSearchParams('format=POUCH&template=CLEAN');
   let restoredHref;
   mocks['next/navigation'].useSearchParams = () => selectionQuery;
@@ -367,6 +394,7 @@ async function main() {
   memory.render(); memory.flush();
   assert.equal(restoredHref, `/rotulo-final?recipeId=${recipe.id}&format=CINTA&template=ESSENCIAL`);
   assert.equal(JSON.stringify(recipes), savedRecipe);
+  await require('./barcode-product-local-cases.cjs')({ load, harness, elements, action, mocks, recipes, barcodes, repo, usage: { get: () => used, set: value => { used = value; } } });
   console.log('STAGE 3 OK: progressive preview, actionable specific pending fields, saved recipes unchanged, process risk without default NO, conditional details, UNKNOWN/PDF/overflow preserved; no DB connection.');
   console.log('STAGE 2 OK: same-recipe identity/composition, edit/remove, atomic yield+packaging validation, liquid/bulk, old edit route, unsaved-data guard, inline CUSTOM return, ownership and UNKNOWN/null/zero; no DB connection.');
   console.log('LOCAL OK: prefix M/MA/accent/clear; bounded alphabetical pages and ownership; create/add/yield/information/packaging/barcode/preview; units and bulk/liquid; controlled selection and failure redirect; UNKNOWN and null/PDF guards; progressive rendered content; no DB connection.');

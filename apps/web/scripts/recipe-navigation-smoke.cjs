@@ -18,7 +18,7 @@ vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.Mo
 });
 for (const current of [1, 2, 3]) {
   const html = renderToStaticMarkup(React.createElement(exportsObject.RecipeSteps, { current, recipeId: 'same-recipe', detail: 'Detalhe' }));
-  for (const label of ['Minha receita', 'Meu produto', 'Meu rótulo']) assert(html.includes(label));
+  for (const label of ['Minha receita', 'Meu produto', 'Minha tabela']) assert(html.includes(label));
   assert.equal((html.match(/aria-current="step"/g) || []).length, 1);
   assert(html.includes('sm:grid-cols-3'));
   assert(html.includes('/receitas/same-recipe/ingredientes'));
@@ -34,7 +34,7 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 for (const [file, stage] of [
   ['receitas/nova/page.tsx', 1],
   ['receitas/[recipeId]/ingredientes/page.tsx', 1], ['receitas/[recipeId]/rendimento/page.tsx', 2],
-  ['receitas/[recipeId]/informacoes/page.tsx', 3], ['receitas/[recipeId]/page.tsx', 2], ['rotulo-final/page.tsx', 3]
+  ['receitas/[recipeId]/informacoes/page.tsx', 2], ['receitas/[recipeId]/page.tsx', 2], ['rotulo-final/page.tsx', 3]
 ]) {
   const page = read('apps/web/src/app/' + file);
   assert(page.includes(`RecipeSteps current={${stage}}`), file);
@@ -43,8 +43,26 @@ for (const [file, stage] of [
 }
 const information = read('apps/web/src/app/receitas/[recipeId]/informacoes/page.tsx');
 assert(read('apps/web/src/app/receitas/[recipeId]/editar/page.tsx').includes('return RecipeIngredientsStepPage({ params,'), 'Old edit route reuses the authenticated composition page');
-for (const field of ['RegulatoryCategoryFields', 'RegulatoryPackagingFields', 'confirmedAllergens', 'glutenStatus', 'lactoseStatus', 'crossContaminationRisk', 'reviewed']) assert(information.includes(field));
+for (const field of ['RegulatoryCategoryFields', 'RegulatoryPackagingFields', 'confirmedAllergens', 'glutenStatus', 'lactoseStatus', 'crossContaminationRisk', 'reviewed']) assert((information + read('apps/web/src/app/receitas/[recipeId]/informacoes/product-information-section.tsx') + read('apps/web/src/app/receitas/[recipeId]/informacoes/product-information-fields.tsx') + read('apps/web/src/app/receitas/[recipeId]/informacoes/process-review.tsx')).includes(field));
 const actions = read('apps/web/src/lib/recipes/actions.ts');
 assert(actions.includes('redirect("/receitas/" + recipeId + "/informacoes")'));
 assert(actions.includes('redirect("/receitas/" + recipeId)'));
+// Exercise the real desktop/mobile shared links using the current dynamic recipe.
+let routeParams = {};
+const sidebarExports = {};
+vm.runInNewContext(ts.transpileModule(read('apps/web/src/components/layout/sidebar.tsx'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, {
+  exports: sidebarExports, encodeURIComponent,
+  require: id => {
+    if (id === 'next/navigation') return { useParams: () => routeParams };
+    if (id === 'react') return { ...React, useState: () => [false, () => {}], useEffect: () => {} };
+    if (id === 'next/link') return { __esModule: true, default: ({ children, ...props }) => React.createElement('a', props, children) };
+    if (id === '@/lib/utils') return { cn: (...args) => args.filter(Boolean).join(' ') };
+    return appRequire(id);
+  }
+});
+for (const [params, explicit, expected] of [[{ recipeId: 'recipe-B' }, undefined, '/rotulo-final?recipeId=recipe-B'], [{ recipeId: 'a/b?c' }, undefined, '/rotulo-final?recipeId=a%2Fb%3Fc'], [{}, 'selected-table', '/rotulo-final?recipeId=selected-table'], [{}, undefined, '/rotulo-final']]) {
+  routeParams = params;
+  const html = renderToStaticMarkup(React.createElement(sidebarExports.Sidebar, { recipeId: explicit }));
+  assert(html.includes('href="' + expected + '"'), 'Sidebar preserves the current recipe');
+}
 console.log('OK: three stages, same recipe, mobile structure, authenticated routes and existing regulatory review preserved; no DB access.');

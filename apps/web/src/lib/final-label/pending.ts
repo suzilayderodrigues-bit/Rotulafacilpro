@@ -7,6 +7,8 @@ export function finalLabelPending(preview: FinalLabelPreview, format?: string, t
   const context = new URLSearchParams({ returnTo: "label", format: resolveLabelFormat(format), template: resolveLabelTemplate(template) });
   const review = `${recipe}/informacoes?${context}`;
   const destinations: Record<string, [string, string]> = {
+    GLUTEN_CONTRADICTION: ["Há ingrediente com glúten. Revise a declaração de glúten em Meu produto.", `${review}#gluten`],
+    LACTOSE_CONTRADICTION: ["Há ingrediente com lactose. Revise a declaração de lactose em Meu produto.", `${review}#lactose`],
     MISSING_NET_QUANTITY: ["Informe quanto vai em cada embalagem.", `${recipe}/rendimento`],
     MISSING_INGREDIENTS: ["Adicione os ingredientes e as quantidades usadas.", `${recipe}/ingredientes`],
     ALLERGENS_REQUIRE_REVIEW: ["Confira a informação de alergênicos de cada ingrediente e as declarações confirmadas. Uma confirmação geral não resolve dados desconhecidos.", `${review}#alergenicos`],

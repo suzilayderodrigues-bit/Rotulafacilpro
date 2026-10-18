@@ -7,6 +7,9 @@ import { Topbar } from "@/components/layout/topbar";
 import { requireUser } from "@/lib/auth/session";
 import { findRecipe } from "@/lib/recipes/repository";
 
+import { ProductInformationSection } from "../informacoes/product-information-section";
+import { findBarcodeByRecipe } from "@/lib/barcodes/repository";
+import { ProductBarcodeSection } from "./product-barcode-section";
 import { YieldForm } from "./yield-form";
 import { PackagingForm } from "../packaging-form";
 import { getServingSuggestion } from "@/lib/regulatory";
@@ -21,6 +24,10 @@ type RecipeYieldStepPageProps = {
 
 
 const statusMessages: Record<string, string> = {
+  revisao: "Confira as informações do produto e do preparo antes de salvar.",
+  informacoes: "Revise as informações do produto. Não declare ausência quando a fonte informa presença.",
+  "painel-principal": "Informe as medidas da frente principal da embalagem para avaliar a lupa.",
+  "adicoes-nutrientes": "Complete as informações sobre os ingredientes adicionados.",
   "embalagem-quantidade-liquida": "Informe a quantidade contida em cada embalagem.",
   "embalagem-porcao": "Informe uma porção válida, sem ultrapassar o conteúdo da embalagem.",
   "embalagem-medida-caseira": "Informe como representar a porção, por exemplo: 1 unidade.",
@@ -96,6 +103,7 @@ export default async function RecipeYieldStepPage({ params, searchParams }: Reci
     );
   }
 
+  const barcode = await findBarcodeByRecipe(user.id, recipe.id);
   const unit = unitLabel(recipe.physicalState);
   const hasIngredients = recipe.ingredients.length > 0;
 
@@ -125,7 +133,7 @@ export default async function RecipeYieldStepPage({ params, searchParams }: Reci
               <p className="mt-3 text-sm font-semibold text-[var(--brand-petrol)]">{recipe.name}</p>
             </section>
 
-            <div className="mb-6"><RecipeSteps current={2} recipeId={recipe.id} detail="Rendimento e embalagem" /></div>
+            <div className="mb-6"><RecipeSteps current={2} recipeId={recipe.id} detail="Rendimento, embalagem e informações do produto" /></div>
 
             {status ? (
               <Toast className="mb-5 border-[#f0c4c0]">{statusMessages[status] ?? statusMessages.formulario}</Toast>
@@ -173,15 +181,17 @@ export default async function RecipeYieldStepPage({ params, searchParams }: Reci
                 />
               </Card>
               <Card className="shadow-none">
-                <CardHeader className="flex-col"><CardTitle>Conteúdo de cada embalagem</CardTitle><CardDescription>O rendimento é o total preparado. A embalagem é a quantidade que você entrega ao cliente.</CardDescription></CardHeader>
+                <CardHeader className="flex-col"><CardTitle>Conteúdo de cada embalagem</CardTitle><CardDescription>O rendimento é o total preparado. Informe abaixo o conteúdo da embalagem e a porção usada na tabela; uma unidade não define a porção automaticamente.</CardDescription></CardHeader>
                 <PackagingForm embedded action={updateRecipeProductSetupAction} recipeId={recipe.id}
                   unit={recipe.physicalState === "LIQUID" ? "MILLILITER" : "GRAM"} unitLabel={unit}
                   defaultNetQuantity={formatDecimal(recipe.netQuantity)} defaultServingSize={formatDecimal(recipe.servingSize)}
                   defaultHouseholdMeasure={recipe.householdMeasure ?? ""} suggestion={getServingSuggestion(recipe.foodCategory, recipe.physicalState)} />
               </Card>
-              <div className="flex justify-end"><RecipeSubmitButton>Salvar e ver meu rótulo</RecipeSubmitButton></div>
+              <ProductInformationSection recipe={recipe} />
+              <div className="flex justify-end"><RecipeSubmitButton>Salvar e ver minha tabela</RecipeSubmitButton></div>
               </form>
             )}
+            <div className="mt-5"><ProductBarcodeSection recipeId={recipe.id} recipeName={recipe.name} barcode={barcode} status={cleanParam(query.barcodeStatus)} /></div>
           </div>
         </div>
       </div>

@@ -370,7 +370,7 @@ export default async function RecipeSummaryPage({ params, searchParams }: Recipe
             </section>
 
             <RecipeSteps current={2} recipeId={recipe.id} detail="Embalagem e resumo do produto" />
-            <Link href={`/rotulo-final?recipeId=${encodeURIComponent(recipe.id)}`} className="mb-5 inline-flex min-h-11 w-full items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-tiffany)] px-4 font-semibold text-[var(--brand-navy)] sm:w-auto">Continuar para Meu rótulo</Link>
+            <Link href={`/rotulo-final?recipeId=${encodeURIComponent(recipe.id)}`} className="mb-5 inline-flex min-h-11 w-full items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-tiffany)] px-4 font-semibold text-[var(--brand-navy)] sm:w-auto">Continuar para Minha tabela</Link>
             <div className="grid gap-5 lg:grid-cols-[1fr_0.8fr]">
               <Card className="shadow-none">
                 <CardHeader className="flex-col">

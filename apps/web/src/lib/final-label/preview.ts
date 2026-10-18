@@ -1,3 +1,4 @@
+import { ingredientDisclosureConflict } from "@/lib/recipes/product-information";
 import { findBarcodeByRecipe } from "@/lib/barcodes/repository";
 import { resolveIngredientAllergenState, type IngredientAllergenState } from "@rotula-facil-pro/db/allergens";
 import { renderBarcodeSvg, type BarcodeRenderResult } from "@/lib/barcodes/render";
@@ -36,6 +37,7 @@ export type FinalLabelPreview = {
   lactoseStatus: Recipe["lactoseStatus"];
   crossContaminationRisk: Recipe["crossContaminationRisk"];
   crossContaminationAllergens: string[];
+  mainPanelAreaCm2?: number | null;
   nutritionTable: NutritionTableViewModel | null;
   frontOfPack: FinalFrontOfPackDecision | null;
   barcode: { value: string; type: Barcode["type"]; format: Barcode["format"]; display: BarcodeRenderResult } | null;
@@ -90,6 +92,13 @@ export function composeFinalLabelPreview(recipe: Recipe, barcode: Barcode | null
     add("MISSING_CROSS_CONTAMINATION_ALLERGENS", "BLOCK", "Informe quais alergênicos podem estar presentes por contaminação cruzada.");
   } else if (recipe.glutenStatus === "NEEDS_REVIEW" || recipe.lactoseStatus === "NEEDS_REVIEW" || recipe.crossContaminationRisk === "UNKNOWN") {
     add("DECLARATION_REQUIRES_REVIEW", "REVIEW", "Há declarações da receita marcadas para revisão.");
+  }
+
+  if (ingredientDisclosureConflict(recipe, "containsGluten", recipe.glutenStatus)) {
+    add("GLUTEN_CONTRADICTION", "BLOCK", "Há ingrediente com glúten. Revise a declaração de glúten em Meu produto.");
+  }
+  if (ingredientDisclosureConflict(recipe, "containsLactose", recipe.lactoseStatus)) {
+    add("LACTOSE_CONTRADICTION", "BLOCK", "Há ingrediente com lactose. Revise a declaração de lactose em Meu produto.");
   }
 
   let nutritionTable: NutritionTableViewModel | null = null;
@@ -161,6 +170,7 @@ export function composeFinalLabelPreview(recipe: Recipe, barcode: Barcode | null
     ingredientCompletions: recipe.ingredients.map(item => ({ itemId: item.id, name: item.ingredient.name, missing: missingIngredientInformation(item.ingredient) })).filter(item => item.missing.length > 0),
     lactoseStatus: recipe.lactoseStatus, crossContaminationRisk: recipe.crossContaminationRisk,
     crossContaminationAllergens: recipe.crossContaminationAllergens,
+    mainPanelAreaCm2: deriveRecipeMainPanelAreaCm2(recipe),
     nutritionTable, frontOfPack, barcode: barcodePreview, issues, status
   };
 }

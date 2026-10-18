@@ -98,6 +98,8 @@ function measureLayout(preview: FinalLabelPreview, format: LabelFormat): PdfLayo
 }
 
 export function assessFinalLabelPdf(preview: FinalLabelPreview, format: LabelFormat): FinalLabelPdfAssessment {
+  const contradiction = preview.issues.find(issue => ["GLUTEN_CONTRADICTION", "LACTOSE_CONTRADICTION"].includes(issue.code));
+  if (contradiction) return { allowed: false, code: "REQUIRES_REVIEW", message: contradiction.message };
   if (preview.allergenStatus === "UNKNOWN") {
     return { allowed: false, code: "REQUIRES_REVIEW", message: "Revise os alergênicos desconhecidos antes de baixar o PDF. Informação ausente não confirma ausência." };
   }

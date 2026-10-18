@@ -154,7 +154,7 @@ async function testSelector() {
   assert.equal((await ingredientRepo.searchAccessibleIngredients('A', 'secreto', 0)).items.length, 0);
   const panel = load('apps/web/src/lib/recipes/main-panel.ts');
   const domain = load('apps/web/src/lib/recipes/domain.ts', { './main-panel': panel });
-  const recipeRepo = load('apps/web/src/lib/recipes/repository.ts', { '@rotula-facil-pro/db': { prisma }, '@/lib/ingredients/repository': ingredientRepo, './domain': domain });
+  const recipeRepo = load('apps/web/src/lib/recipes/repository.ts', { '@rotula-facil-pro/db': { prisma }, '@/lib/ingredients/repository': ingredientRepo, './domain': domain, './product-information': load('apps/web/src/lib/recipes/product-information.ts', { '@rotula-facil-pro/db/allergens': allergy, './domain': domain }) });
   const calculator = load('apps/web/src/lib/nutrition/calculator.ts');
   const ingredient = ingredients[0];
   const before = { id: 'recipe-A', physicalState: 'SOLID_OR_SEMISOLID', finalYieldAmount: '500', finalYieldUnit: 'GRAM', unitWeight: 50, ingredients: [{ id: 'item-0', amount: '250', unit: 'GRAM', ingredient }] };

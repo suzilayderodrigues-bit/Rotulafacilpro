@@ -5,7 +5,7 @@ export function RecipeSteps({ current, recipeId, detail }: { current: 1 | 2 | 3;
   const steps = [
     { label: "Minha receita", href: id ? `/receitas/${id}/ingredientes` : null },
     { label: "Meu produto", href: id ? `/receitas/${id}/rendimento` : null },
-    { label: "Meu rótulo", href: id ? `/rotulo-final?recipeId=${id}` : null }
+    { label: "Minha tabela", href: id ? `/rotulo-final?recipeId=${id}` : null }
   ];
   return <nav aria-label="Etapas da receita" className="my-5">
     <p className="mb-3 text-sm font-semibold">Etapa {current} de 3 · {detail}</p>

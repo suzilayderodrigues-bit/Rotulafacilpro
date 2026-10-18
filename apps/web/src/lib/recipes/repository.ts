@@ -1,3 +1,4 @@
+import { prepareProductInformationInput } from "./product-information";
 import { prisma, type Prisma } from "@rotula-facil-pro/db";
 import { findAccessibleIngredient } from "@/lib/ingredients/repository";
 import {
@@ -157,14 +158,15 @@ export async function updateRecipeInformation(userId: string, recipeId: string, 
     where: {
       id: recipeId,
       userId
-    }
+    },
+    include: recipeInclude
   });
 
   if (!current) {
     throw new RecipeValidationError("recipe-not-found");
   }
 
-  const data = validateRecipeInformationInput(input);
+  const data = validateRecipeInformationInput(prepareProductInformationInput(current, input));
 
   return prisma.recipe.update({
     where: { id: current.id },
@@ -172,19 +174,20 @@ export async function updateRecipeInformation(userId: string, recipeId: string, 
   });
 }
 
-/** Validate both sections before one atomic update; unrelated saved fields are untouched. */
-export async function updateRecipeProductSetup(userId: string, recipeId: string, yieldInput: RecipeYieldInput, packagingInput: RecipePackagingInput) {
+/** Validate all supplied sections before one atomic update; unrelated saved fields are untouched. */
+export async function updateRecipeProductSetup(userId: string, recipeId: string, yieldInput: RecipeYieldInput, packagingInput: RecipePackagingInput, informationInput?: RecipeInformationInput) {
   const current = await prisma.recipe.findFirst({
     where: { id: recipeId, userId },
-    include: { _count: { select: { ingredients: true } } }
+    include: { ...recipeInclude, _count: { select: { ingredients: true } } }
   });
   if (!current) throw new RecipeValidationError("recipe-not-found");
   if (current._count.ingredients === 0) throw new RecipeValidationError("recipe-has-no-ingredients");
   const yieldData = validateRecipeYieldInput(yieldInput);
   const packagingData = validateRecipePackagingInput(packagingInput, current.physicalState);
+  const informationData = informationInput ? validateRecipeInformationInput(prepareProductInformationInput(current, informationInput)) : {};
   return prisma.recipe.update({
     where: { id: current.id, userId },
-    data: { ...yieldData, ...packagingData, finalYieldUnit: current.physicalState === "LIQUID" ? "MILLILITER" : "GRAM" }
+    data: { ...yieldData, ...packagingData, ...informationData, finalYieldUnit: current.physicalState === "LIQUID" ? "MILLILITER" : "GRAM" }
   });
 }
 

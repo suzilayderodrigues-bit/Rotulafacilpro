@@ -6,11 +6,11 @@ import { Card, CardTitle, Input, Label } from "@/components/design-system";
 export function ProcessReview({ defaultRisk, defaultAllergens }: { defaultRisk: string | null; defaultAllergens: string[] }) {
   const [risk, setRisk] = useState(defaultRisk ?? "");
   return <details id="processo" open={!risk || risk === "UNKNOWN" || (risk === "YES" && defaultAllergens.length === 0)} className="rounded border bg-white p-3">
-    <summary className="cursor-pointer text-sm font-semibold">Processo de produção · {risk === "NO" ? "avaliação salva, sem risco identificado" : risk === "YES" ? "risco identificado" : "avaliar"}</summary>
+    <summary className="cursor-pointer text-sm font-semibold">Contato cruzado · {risk === "NO" ? "avaliação salva, sem risco identificado" : risk === "YES" ? "risco identificado" : "avaliar"}</summary>
     <Card className="shadow-none">
-    <CardTitle>Avaliação do processo de produção</CardTitle>
+    <CardTitle>Contato durante o preparo</CardTitle>
     <fieldset className="mt-3">
-      <legend className="text-sm">Depois de avaliar utensílios, equipamentos e ambiente, há risco de contato com outros alergênicos?</legend>
+      <legend className="text-sm">Utensílios, equipamentos ou o ambiente podem colocar o produto em contato com outros alergênicos?</legend>
       <div className="mt-3 grid gap-2 sm:grid-cols-3">
         {([["YES", "Sim, identifiquei risco"], ["NO", "Avaliei e não identifiquei risco"], ["UNKNOWN", "Ainda preciso avaliar"]] as const).map(([value, label]) =>
           <label key={value} className="flex min-h-12 items-center gap-2 rounded border p-3 text-sm">
