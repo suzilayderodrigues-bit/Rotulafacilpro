@@ -16,25 +16,17 @@ const normalizeSearch = (search: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 
-const ingredientTextSearchWhere = (search?: string): Prisma.IngredientWhereInput =>
-  search
-    ? {
-        OR: [
-          {
-            name: {
-              startsWith: search,
-              mode: "insensitive"
-            }
-          },
-          {
-            normalizedName: {
-              startsWith: normalizeSearch(search),
-              mode: "insensitive"
-            }
-          }
-        ]
-      }
-    : {};
+const ingredientTextSearchWhere = (search?: string): Prisma.IngredientWhereInput => {
+  if (!search) return {};
+  // The Marilan spelling and the common ingredient spelling refer to the same search term.
+  const terms = [...new Set([search, search.replace(/\bmai[sz]ena\b/gi, word => /s/i.test(word) ? "maizena" : "maisena")])];
+  return {
+    OR: terms.flatMap(term => [
+      { name: { contains: term, mode: "insensitive" as const } },
+      { normalizedName: { contains: normalizeSearch(term), mode: "insensitive" as const } }
+    ])
+  };
+};
 
 const baseRotulaIngredientWhere = ({
   search,

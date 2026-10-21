@@ -73,7 +73,7 @@ export function IngredientSelector({ recipeId, addedIds, initialPage, customIngr
         </div>
       </form> : <>
         <Label htmlFor="ingredient-search" className="sr-only">Buscar ingrediente</Label>
-        <Input id="ingredient-search" maxLength={120} value={search} placeholder="Buscar pelo início do nome..." autoFocus onChange={(event) => { setSearch(event.target.value); setPage(0); setResults(event.target.value.trim() ? [] : initialPage.items); setHasMore(false); setLoading(true); }} />
+        <Input id="ingredient-search" maxLength={120} value={search} placeholder="Buscar ingrediente..." autoFocus onChange={(event) => { setSearch(event.target.value); setPage(0); setResults(event.target.value.trim() ? [] : initialPage.items); setHasMore(false); setLoading(true); }} />
         <p className="mt-2 text-xs text-[var(--muted)]">Base Rotula e ingredientes da sua conta.</p>
         <div className="mt-3 max-h-[45dvh] overflow-y-auto" aria-live="polite" aria-busy={loading}>
           {error ? <p role="alert">{error}</p> : results.length === 0 ? <p>{loading ? "Buscando..." : "Nenhum ingrediente encontrado."}</p> : <ul className="divide-y divide-[var(--border)]">

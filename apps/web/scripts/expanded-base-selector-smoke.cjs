@@ -122,6 +122,13 @@ async function testSelector() {
   }));
   ingredients.push({ ...ingredients[0], id: 'own', name: 'Meu cacau', normalizedName: 'meu cacau', source: 'CUSTOM', userId: 'A' });
   ingredients.push({ ...ingredients[0], id: 'foreign', name: 'Secreto B', normalizedName: 'secreto b', source: 'CUSTOM', userId: 'B' });
+  for (const [id, name, source, userId] of [
+    ['genuine', 'Genuine chocolate em pó 50%', 'BASE_ROTULA', null],
+    ['condensed', 'Camponesa leite condensado integral 395 g', 'BASE_ROTULA', null],
+    ['biscuit', 'Biscoito Marilan Maizena 300 g', 'BASE_ROTULA', null],
+    ['private-chocolate', 'Meu chocolate em pó Genuine', 'CUSTOM', 'A'],
+    ['foreign-chocolate', 'Meu chocolate em pó Genuine', 'CUSTOM', 'B']
+  ]) ingredients.push({ ...ingredients[0], id, name, normalizedName: normalize(name), source, userId });
   const records = [];
   let lastQuery;
   const prisma = {
@@ -149,9 +156,24 @@ async function testSelector() {
   const second = await ingredientRepo.searchAccessibleIngredients('A', 'acucar', 1);
   assert.equal(new Set([...first.items, ...second.items].map((row) => row.id)).size, 40);
   assert.equal((await ingredientRepo.searchAccessibleIngredients('A', 'Meu', 0)).items[0].id, 'own');
-  assert.equal((await ingredientRepo.searchAccessibleIngredients('A', 'cacau', 0)).items.length, 0, 'Search is by prefix, not an interior word');
+  assert.equal((await ingredientRepo.searchAccessibleIngredients('A', 'cacau', 0)).items[0].id, 'own', 'Interior words find private ingredients for their owner');
   assert.equal((await ingredientRepo.searchAccessibleIngredients('B', 'cacau', 0)).items.length, 0);
   assert.equal((await ingredientRepo.searchAccessibleIngredients('A', 'secreto', 0)).items.length, 0);
+  for (const term of ['chocolate em pó', 'CHOCOLATE EM PO', 'Genuine']) {
+    const a = (await ingredientRepo.searchAccessibleIngredients('A', term, 0)).items.map(row => row.id).sort();
+    assert.equal(JSON.stringify(a), JSON.stringify(['genuine', 'private-chocolate']));
+    const b = (await ingredientRepo.searchAccessibleIngredients('B', term, 0)).items.map(row => row.id).sort();
+    assert.equal(JSON.stringify(b), JSON.stringify(['foreign-chocolate', 'genuine']));
+  }
+  assert.equal((await ingredientRepo.searchAccessibleIngredients('A', 'leite condensado', 0)).items[0].id, 'condensed');
+  for (const term of ['maisena', 'MAIZENA']) assert.equal((await ingredientRepo.searchAccessibleIngredients('A', term, 0)).items[0].id, 'biscuit');
+  const added = Array.from({length: 45}, (_, i) => ({ ...ingredients[0], id: 'match-'+i, name: 'Marca Chocolate em pó '+i, normalizedName: 'marca chocolate em po '+i }));
+  ingredients.push(...added);
+  const pages = await Promise.all([0,1,2].map(page => ingredientRepo.searchAccessibleIngredients('A', 'chocolate em pó', page)));
+  assert.equal(pages[0].items.length,20); assert.equal(pages[1].items.length,20); assert.equal(pages[2].items.length,7);
+  assert.equal(pages[0].hasMore,true); assert.equal(pages[1].hasMore,true); assert.equal(pages[2].hasMore,false);
+  assert.equal(new Set(pages.flatMap(page => page.items.map(row => row.id))).size,47);
+  ingredients.splice(ingredients.length-added.length,added.length);
   const panel = load('apps/web/src/lib/recipes/main-panel.ts');
   const domain = load('apps/web/src/lib/recipes/domain.ts', { './main-panel': panel });
   const recipeRepo = load('apps/web/src/lib/recipes/repository.ts', { '@rotula-facil-pro/db': { prisma }, '@/lib/ingredients/repository': ingredientRepo, './domain': domain, './product-information': load('apps/web/src/lib/recipes/product-information.ts', { '@rotula-facil-pro/db/allergens': allergy, './domain': domain }) });
@@ -182,6 +204,10 @@ async function testSelector() {
   });
   const get = (query = '', recipeId = 'recipe-A') => route.GET(new Request(`https://example.invalid/busca${query}`), { params: Promise.resolve({ recipeId }) });
   assert.equal((await get('?q=acucar')).status, 200);
+  for (const term of ['chocolate em pó', 'Genuine', 'leite condensado', 'maisena']) {
+    const response=await get('?q='+encodeURIComponent(term));assert.equal(response.status,200);
+    const data=await response.json();assert(data.items.length>0);assert(!data.items.some(row=>row.id==='foreign-chocolate'));
+  }
   assert.equal((await get('?page=-1')).status, 400);
   assert.equal((await get('', 'recipe-B')).status, 404);
   user = { id: 'B' }; assert.equal((await get()).status, 404);
@@ -194,6 +220,8 @@ async function testSelector() {
   assert(selector.includes('showModal()') && selector.includes('max-h-[45dvh]') && selector.includes('aria-labelledby'));
 }
 (async () => {
-  await testImport(); await testSelector();
+  if (!process.argv.includes('--selector-only')) await testImport();
+  await testSelector();
+  if (process.argv.includes('--selector-only')) { console.log('SELECTOR LOCAL OK: substring, case/accent, maisena/maizena, 20-item pagination, private ownership, recipe ownership and routes. No import function, SQL or migration executed.'); return; }
   console.log('LOCAL OK: históricos, 320 inclusões, dry-run, idempotência/concorrência simulada, índice parcial em SQLite em memória, conflitos, null/zero, base100, busca/paginação, ownership, CRUD e regressão nutricional. Nenhuma conexão ao Neon.');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

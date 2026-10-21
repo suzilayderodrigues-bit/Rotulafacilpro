@@ -50,6 +50,7 @@ function matches(row, where = {}) {
   return Object.entries(where).every(([key, value]) => {
     if (key === 'AND') return value.every(part => matches(row, part));
     if (key === 'OR') return value.some(part => matches(row, part));
+    if (value && typeof value === 'object' && 'contains' in value) return row[key].toLowerCase().includes(value.contains.toLowerCase());
     if (value && typeof value === 'object' && 'startsWith' in value) return row[key].toLowerCase().startsWith(value.startsWith.toLowerCase());
     return row[key] === value;
   });
@@ -129,10 +130,10 @@ async function main() {
   const domain = load('apps/web/src/lib/recipes/domain.ts');
   assert.equal((await ingredientRepo.searchAccessibleIngredients('owner', '', 0)).items.length, 20);
   const m = await ingredientRepo.searchAccessibleIngredients('owner', 'M', 0);
-  assert(m.items.every(row => row.name.startsWith('M')));
+  assert(m.items.every(row => row.name.toLowerCase().includes('m')));
   const ma = await ingredientRepo.searchAccessibleIngredients('owner', 'MA', 0);
-  assert.deepEqual(ma.items.map(row => row.id).sort(), ['base', 'own']);
-  assert.equal((await ingredientRepo.searchAccessibleIngredients('owner', 'maca', 0)).items[0].id, 'base');
+  assert.deepEqual(ma.items.map(row => row.id).sort(), ['base', 'middle', 'own']);
+  assert.deepEqual((await ingredientRepo.searchAccessibleIngredients('owner', 'maca', 0)).items.map(row => row.id), ['middle', 'base']);
   assert(!(await ingredientRepo.searchAccessibleIngredients('owner', '', 0)).items.some(row => row.id === 'foreign'));
   const first = await ingredientRepo.listIngredientPage('owner', 'base', '', undefined, 0);
   const next = await ingredientRepo.listIngredientPage('owner', 'base', '', undefined, 1);
@@ -397,6 +398,6 @@ async function main() {
   await require('./barcode-product-local-cases.cjs')({ load, harness, elements, action, mocks, recipes, barcodes, repo, usage: { get: () => used, set: value => { used = value; } } });
   console.log('STAGE 3 OK: progressive preview, actionable specific pending fields, saved recipes unchanged, process risk without default NO, conditional details, UNKNOWN/PDF/overflow preserved; no DB connection.');
   console.log('STAGE 2 OK: same-recipe identity/composition, edit/remove, atomic yield+packaging validation, liquid/bulk, old edit route, unsaved-data guard, inline CUSTOM return, ownership and UNKNOWN/null/zero; no DB connection.');
-  console.log('LOCAL OK: prefix M/MA/accent/clear; bounded alphabetical pages and ownership; create/add/yield/information/packaging/barcode/preview; units and bulk/liquid; controlled selection and failure redirect; UNKNOWN and null/PDF guards; progressive rendered content; no DB connection.');
+  console.log('LOCAL OK: substring M/MA/accent/clear; bounded alphabetical pages and ownership; create/add/yield/information/packaging/barcode/preview; units and bulk/liquid; controlled selection and failure redirect; UNKNOWN and null/PDF guards; progressive rendered content; no DB connection.');
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });
