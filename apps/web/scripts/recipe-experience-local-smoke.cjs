@@ -56,7 +56,7 @@ function matches(row, where = {}) {
 }
 const nutritionFields = load('apps/web/src/lib/nutrition/calculator.ts').nutritionNutrientFields;
 const ingredient = { id: 'base', name: 'Maçã', normalizedName: 'maca', category: 'Frutas', source: 'BASE_ROTULA', userId: null,
-  baseQuantity: 100, baseUnit: 'GRAM', allergens: [], allergenStatus: 'UNKNOWN', containsGluten: null, containsLactose: null,
+  baseQuantity: 100, baseUnit: 'GRAM', allergens: [], allergenStatus: 'UNKNOWN', containsGluten: false, containsLactose: false,
   ...Object.fromEntries(nutritionFields.map(key => [key, 0])), caloriesKcal: 200, carbohydratesG: 30, proteinsG: 4 };
 const ingredients = [ingredient, { ...ingredient, id: 'own', name: 'Manteiga', normalizedName: 'manteiga', source: 'CUSTOM', userId: 'owner' },
   { ...ingredient, id: 'foreign', name: 'Massa secreta', normalizedName: 'massa secreta', source: 'CUSTOM', userId: 'other' },

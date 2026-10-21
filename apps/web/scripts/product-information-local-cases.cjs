@@ -87,6 +87,28 @@ module.exports = async function testProductInformation({ load, harness, elements
     model = buildProductInformationModel(unknownRecipe);
     assert.equal(model.unknownIngredients.length, 1); assert.equal(model.allSourcesDeclareNone, false);
     expectBlocked(unknownRecipe);
+    assert.equal(model.reviewed, false, 'Saved process review does not resolve ingredient uncertainty');
+    const partialSource = { ...source, allergenStatus: 'UNKNOWN', allergens: ['LEITE'] };
+    const partialRecipe = { ...current(), ingredients: [{ ...current().ingredients[0], ingredient: partialSource }] };
+    const partialModel = buildProductInformationModel(partialRecipe);
+    assert(partialModel.knownAllergens.includes('LEITE')); assert.equal(partialModel.reviewed, false);
+    assert(prepareProductInformationInput(partialRecipe, information).confirmedAllergens.includes('LEITE'));
+    expectBlocked(partialRecipe);
+    for (const field of ['containsGluten', 'containsLactose']) {
+      const status = field === 'containsGluten' ? 'glutenStatus' : 'lactoseStatus';
+      const savedUnknown = { ...current(), [status]: 'DOES_NOT_CONTAIN', ingredients: [{ ...current().ingredients[0], ingredient: { ...source, [field]: null } }] };
+      const savedModel = buildProductInformationModel(savedUnknown);
+      assert.equal(savedModel.reviewed, false);
+      assert.equal(savedModel[field === 'containsGluten' ? 'gluten' : 'lactose'].verified, false);
+      assert.throws(() => prepareProductInformationInput(savedUnknown, { ...information, [status]: 'DOES_NOT_CONTAIN' }), error => error.code === 'invalid-information');
+      for (const process of ['NO', 'YES']) for (const declaration of ['CONTAINS', 'DOES_NOT_CONTAIN']) {
+        const pending = { ...savedUnknown, [status]: declaration, crossContaminationRisk: process, crossContaminationAllergens: ['AMENDOIM'] };
+        expectBlocked(pending);
+        assert.equal(compositor.composeFinalLabelPreview(pending, null).nutritionTable.status, 'COMPLETE');
+      }
+      const absent = { ...savedUnknown, ingredients: [{ ...savedUnknown.ingredients[0], ingredient: { ...source, [field]: false } }] };
+      assert.doesNotThrow(() => prepareProductInformationInput(absent, { ...information, [status]: 'DOES_NOT_CONTAIN' }));
+    }
     const freshUnknown = { ...unknownRecipe, informationReviewedAt: null, glutenStatus: null, lactoseStatus: null, crossContaminationRisk: null };
     model = buildProductInformationModel(freshUnknown);
     assert.equal(model.gluten.value, 'NEEDS_REVIEW'); assert.equal(model.lactose.value, 'NEEDS_REVIEW');

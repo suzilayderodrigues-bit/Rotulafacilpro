@@ -10,7 +10,8 @@ export function normalizeAllergenDeclaration(value: unknown, requested?: unknown
   const list = absent ? null : value as string[];
   const status = requested ?? (list?.length ? "KNOWN" : "UNKNOWN");
   if (status === "KNOWN" && list?.length) return { allergenStatus: "KNOWN", allergens: [...list] };
-  if (status === "UNKNOWN" && !list?.length) return { allergenStatus: "UNKNOWN", allergens: null };
+  // A partial declaration retains established presences without claiming completeness.
+  if (status === "UNKNOWN") return { allergenStatus: "UNKNOWN", allergens: list?.length ? [...list] : null };
   // NONE requires an explicit state AND explicit empty list. Missing source data never reaches NONE.
   if (status === "NONE" && list && list.length === 0) return { allergenStatus: "NONE", allergens: [] };
   throw new Error("allergens: estado/lista incompatíveis; NONE exige confirmação explícita com lista vazia");

@@ -1,4 +1,4 @@
-import { ingredientDisclosureConflict } from "@/lib/recipes/product-information";
+import { ingredientDisclosureConflict, ingredientDisclosureUnknown } from "@/lib/recipes/product-information";
 import { findBarcodeByRecipe } from "@/lib/barcodes/repository";
 import { resolveIngredientAllergenState, type IngredientAllergenState } from "@rotula-facil-pro/db/allergens";
 import { renderBarcodeSvg, type BarcodeRenderResult } from "@/lib/barcodes/render";
@@ -76,7 +76,7 @@ export function composeFinalLabelPreview(recipe: Recipe, barcode: Barcode | null
   const hasUnknownAllergens = recipe.ingredients.some(({ ingredient }) => resolveIngredientAllergenState(ingredient) === "UNKNOWN");
   const normalizeAllergen = (value: string) => value.trim().replace(/\s+/g, " ").toLocaleUpperCase("pt-BR");
   const knownAllergens = recipe.ingredients.flatMap(({ ingredient }) =>
-    resolveIngredientAllergenState(ingredient) === "KNOWN" ? ingredient.allergens ?? [] : []).map(normalizeAllergen);
+    ingredient.allergens ?? []).map(normalizeAllergen);
   const confirmedAllergens = recipe.confirmedAllergens.map(normalizeAllergen);
   const allergens = [...new Set([...knownAllergens, ...confirmedAllergens])];
   const knownButUnconfirmed = knownAllergens.some(value => !confirmedAllergens.includes(value));
@@ -99,6 +99,16 @@ export function composeFinalLabelPreview(recipe: Recipe, barcode: Barcode | null
   }
   if (ingredientDisclosureConflict(recipe, "containsLactose", recipe.lactoseStatus)) {
     add("LACTOSE_CONTRADICTION", "BLOCK", "Há ingrediente com lactose. Revise a declaração de lactose em Meu produto.");
+  }
+
+  // Ingredient uncertainty is independent of saved product/process confirmations.
+  for (const [field, code, label] of [
+    ["containsGluten", "GLUTEN_SOURCE_UNKNOWN", "glúten"],
+    ["containsLactose", "LACTOSE_SOURCE_UNKNOWN", "lactose"]
+  ] as const) {
+    if (ingredientDisclosureUnknown(recipe, field)) {
+      add(code, "REVIEW", `Há ingrediente sem informação de ${label}. Confira a fonte do ingrediente antes de exportar o PDF.`);
+    }
   }
 
   let nutritionTable: NutritionTableViewModel | null = null;

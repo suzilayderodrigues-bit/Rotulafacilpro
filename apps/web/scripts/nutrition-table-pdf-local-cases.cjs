@@ -40,7 +40,24 @@ module.exports = async function testNutritionTablePdf({ load, ready, preview, pa
     assert(domain.assessNutritionTablePdf(corrected).allowed);
     assert(legacyPdf.assessFinalLabelPdf(corrected, 'CINTA').allowed);
   }
-  const blocked = [...contradictions, preview, partial,
+  const sourcePending = [];
+  for (const [field, status, code] of [
+    ['containsGluten', 'glutenStatus', 'GLUTEN_SOURCE_UNKNOWN'],
+    ['containsLactose', 'lactoseStatus', 'LACTOSE_SOURCE_UNKNOWN']
+  ]) for (const declaration of ['DOES_NOT_CONTAIN', 'CONTAINS']) {
+    const stored = { ...hydrate(recipe), [status]: declaration, crossContaminationRisk: 'NO', ingredients: [{ ...hydrate(recipe).ingredients[0], ingredient: { ...ingredient, [field]: null } }] };
+    const pending = compositor.composeFinalLabelPreview(stored, null);
+    assert(pending.issues.some(issue => issue.code === code));
+    assert.equal(pending.nutritionTable.status, 'COMPLETE');
+    assert.equal((await legacyPdf.renderFinalLabelPdf(pending, 'CINTA', 'ESSENCIAL')).status, 'BLOCKED');
+    sourcePending.push(pending);
+  }
+  const partialStored = { ...hydrate(recipe), confirmedAllergens: ['LEITE'], crossContaminationRisk: 'YES', crossContaminationAllergens: ['SOJA'], ingredients: [{ ...hydrate(recipe).ingredients[0], ingredient: { ...ingredient, allergenStatus: 'UNKNOWN', allergens: ['LEITE'] } }] };
+  const partialDeclaration = compositor.composeFinalLabelPreview(partialStored, null);
+  assert(partialDeclaration.allergens.includes('LEITE'));
+  assert.equal(partialDeclaration.allergenStatus, 'UNKNOWN');
+  sourcePending.push(partialDeclaration);
+  const blocked = [...sourcePending, ...contradictions, preview, partial,
     { ...ready, status: 'INCOMPLETE' },
     { ...ready, status: 'REQUIRES_REVIEW' },
     { ...ready, allergenStatus: 'UNKNOWN' },
@@ -157,6 +174,12 @@ module.exports = async function testNutritionTablePdf({ load, ready, preview, pa
       assert.equal(response.status, 409);
       assert.equal(response.headers.get('Cache-Control'), 'private, no-store');
       assert.notEqual((await response.json()).code, undefined);
+    }
+    for (const value of sourcePending) {
+      current = value;
+      assert.equal((await legacyRequest()).status, 409, 'Direct old PDF rejects incomplete ingredient declarations');
+      assert.equal((await request()).status, 409);
+      assert.equal((await request('?mode=print')).status, 409);
     }
     current = preview;
     assert.equal((await legacyRequest()).status, 409, 'UNKNOWN blocks the old direct export too');

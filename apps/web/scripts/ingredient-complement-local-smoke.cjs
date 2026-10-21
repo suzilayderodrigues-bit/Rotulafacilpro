@@ -108,9 +108,17 @@ async function main() {
   for (const value of ['0.001', '100000000']) assert.throws(() => domain.buildIngredientComplement(source, form({ sugarsG: value })), error => error.code === 'precision');
   assert.throws(() => domain.buildIngredientComplement(source, form({ sugarsG: '' })), error => error.code === 'unchanged');
   assert.throws(() => domain.buildIngredientComplement(source, form({ allergenStatus: 'NONE' })), error => error.code === 'declaration');
-  for (const values of [{ allergenStatus: 'KNOWN', allergens: '' }, { allergenStatus: 'UNKNOWN', allergens: 'LEITE' }, { allergenStatus: 'NONE', allergens: 'LEITE' }]) {
+  for (const values of [{ allergenStatus: 'KNOWN', allergens: '' }, { allergenStatus: 'NONE', allergens: 'LEITE' }]) {
     assert.throws(() => domain.buildIngredientComplement(source, form({ ...values, declarationConfirmed: 'on' })), error => error.code === 'declaration');
   }
+  const partial = domain.buildIngredientComplement(source, form({ allergenStatus: 'UNKNOWN', allergens: 'LEITE', declarationConfirmed: 'on' })).data;
+  assert.equal(partial.allergenStatus, 'UNKNOWN'); assert.equal(JSON.stringify(partial.allergens), JSON.stringify(['LEITE']));
+  const partialSource = { ...source, allergenStatus: 'UNKNOWN', allergens: ['LEITE'] };
+  assert.throws(() => domain.buildIngredientComplement(partialSource, form({ allergenStatus: 'NONE', declarationConfirmed: 'on' })), error => error.code === 'declaration');
+  const resolved = domain.buildIngredientComplement(partialSource, form({ allergenStatus: 'KNOWN', allergens: 'SOJA', declarationConfirmed: 'on' })).data;
+  assert.equal(JSON.stringify(resolved.allergens), JSON.stringify(['LEITE', 'SOJA']));
+  const stillPartial = domain.buildIngredientComplement(partialSource, form({ allergenStatus: 'UNKNOWN', allergens: 'SOJA', declarationConfirmed: 'on' })).data;
+  assert.equal(stillPartial.allergenStatus, 'UNKNOWN'); assert.equal(JSON.stringify(stillPartial.allergens), JSON.stringify(['LEITE', 'SOJA']));
   assert.equal(domain.buildIngredientComplement(source, form({ allergenStatus: 'NONE', declarationConfirmed: 'on' })).data.allergenStatus, 'NONE');
   const known = domain.buildIngredientComplement({ ...source, allergenStatus: 'KNOWN', allergens: ['LEITE'], containsGluten: false }, form({ allergenStatus: 'NONE', containsGluten: 'yes', containsLactose: 'yes' })).data;
   assert.equal(JSON.stringify(known.allergens), JSON.stringify(['LEITE'])); assert.equal(known.allergenStatus, 'KNOWN');

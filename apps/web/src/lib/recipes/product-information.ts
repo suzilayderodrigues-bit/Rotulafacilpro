@@ -12,20 +12,24 @@ export function ingredientDisclosureConflict(recipe: Pick<ProductInformationReci
   return declaration === "DOES_NOT_CONTAIN" && recipe.ingredients.some(({ ingredient }) => ingredient[field] === true);
 }
 
+export function ingredientDisclosureUnknown(recipe: Pick<ProductInformationRecipe, "ingredients">, field: "containsGluten" | "containsLactose") {
+  return recipe.ingredients.some(({ ingredient }) => ingredient[field] === null || ingredient[field] === undefined);
+}
+
 export function buildProductInformationModel(recipe: ProductInformationRecipe) {
   const knownAllergens = normalized(recipe.ingredients.flatMap(({ ingredient }) =>
-    resolveIngredientAllergenState(ingredient) === "KNOWN" ? ingredient.allergens : []));
+    ingredient.allergens));
   const confirmed = normalized(recipe.confirmedAllergens);
   const unknownIngredients = recipe.ingredients.filter(({ ingredient }) => resolveIngredientAllergenState(ingredient) === "UNKNOWN")
     .map(item => ({ id: item.id, name: item.ingredient.name }));
   function disclosure(field: "containsGluten" | "containsLactose", saved: string | null) {
     const sourceContains = recipe.ingredients.some(({ ingredient }) => ingredient[field] === true);
-    const sourceUnknown = recipe.ingredients.some(({ ingredient }) => ingredient[field] === null || ingredient[field] === undefined);
+    const sourceUnknown = ingredientDisclosureUnknown(recipe, field);
     const sourceAbsence = recipe.ingredients.length > 0 && recipe.ingredients.every(({ ingredient }) => ingredient[field] === false);
     const conflict = ingredientDisclosureConflict(recipe, field, saved);
     return {
-      value: conflict || (!saved && sourceContains) ? "CONTAINS" : saved ?? "NEEDS_REVIEW",
-      verified: Boolean(recipe.informationReviewedAt) && ["CONTAINS", "DOES_NOT_CONTAIN"].includes(saved ?? "") && !conflict,
+      value: sourceContains && (conflict || !saved) ? "CONTAINS" : sourceUnknown && saved === "DOES_NOT_CONTAIN" ? "NEEDS_REVIEW" : saved ?? "NEEDS_REVIEW",
+      verified: Boolean(recipe.informationReviewedAt) && ["CONTAINS", "DOES_NOT_CONTAIN"].includes(saved ?? "") && !conflict && !sourceUnknown,
       sourceContains, sourceUnknown, sourceAbsence
     };
   }
@@ -42,7 +46,7 @@ export function buildProductInformationModel(recipe: ProductInformationRecipe) {
     gluten, lactose,
     processRisk: recipe.crossContaminationRisk,
     processAllergens: recipe.crossContaminationAllergens,
-    reviewed: Boolean(recipe.informationReviewedAt) && knownAllergens.every(value => confirmed.includes(value)) && gluten.verified && lactose.verified && processVerified
+    reviewed: Boolean(recipe.informationReviewedAt) && !unknownIngredients.length && knownAllergens.every(value => confirmed.includes(value)) && gluten.verified && lactose.verified && processVerified
   };
 }
 
@@ -52,7 +56,9 @@ export type ProductInformationModel = ReturnType<typeof buildProductInformationM
 export function prepareProductInformationInput(recipe: ProductInformationRecipe, input: RecipeInformationInput): RecipeInformationInput {
   const model = buildProductInformationModel(recipe);
   if (ingredientDisclosureConflict(recipe, "containsGluten", input.glutenStatus) ||
-      ingredientDisclosureConflict(recipe, "containsLactose", input.lactoseStatus)) {
+      ingredientDisclosureConflict(recipe, "containsLactose", input.lactoseStatus) ||
+      (input.glutenStatus === "DOES_NOT_CONTAIN" && ingredientDisclosureUnknown(recipe, "containsGluten")) ||
+      (input.lactoseStatus === "DOES_NOT_CONTAIN" && ingredientDisclosureUnknown(recipe, "containsLactose"))) {
     throw new RecipeValidationError("invalid-information");
   }
   const selected = Array.isArray(input.confirmedAllergens) ? input.confirmedAllergens : (input.confirmedAllergens ?? "").split(",");

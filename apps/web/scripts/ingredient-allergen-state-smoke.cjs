@@ -28,7 +28,10 @@ assert.equal(importer.validateExpandedRow({ ...raw, allergens: [] }).allergenSta
 assert.equal(importer.validateExpandedRow({ ...raw, allergens: [], allergenStatus: 'NONE' }).allergenStatus, 'NONE');
 assert.equal(importer.validateExpandedRow({ ...raw, allergens: ['Leite'] }).allergenStatus, 'KNOWN');
 assert.throws(() => importer.validateExpandedRow({ ...raw, allergenStatus: 'NONE' }));
-assert.throws(() => importer.validateExpandedRow({ ...raw, allergens: ['Leite'], allergenStatus: 'UNKNOWN' }));
+const partial = importer.validateExpandedRow({ ...raw, allergens: ['Leite'], allergenStatus: 'UNKNOWN' });
+assert.equal(partial.allergenStatus, 'UNKNOWN');
+assert.equal(JSON.stringify(partial.allergens), JSON.stringify(['Leite']));
+assert.equal(JSON.stringify(allergy.allergenStorage(partial).allergens), JSON.stringify(['Leite']));
 assert.throws(() => importer.validateExpandedRow({ ...raw, allergenStatus: 'INVALID' }));
 assert.equal(allergy.allergenStorage(unknown).allergenStatus, 'UNKNOWN');
 const table = { status: 'COMPLETE', rows: [], missingNutrients: [] };
@@ -58,7 +61,7 @@ const compositor = load('apps/web/src/lib/final-label/preview.ts', {
 const recipe = { id: 'test', name: 'Teste', physicalState: 'SOLID_OR_SEMISOLID', netQuantity: 100, netQuantityUnit: 'GRAM',
   informationReviewedAt: new Date(), confirmedAllergens: [], glutenStatus: 'DOES_NOT_CONTAIN', lactoseStatus: 'DOES_NOT_CONTAIN',
   crossContaminationRisk: 'NO', crossContaminationAllergens: [], servingSize: 50,
-  ingredients: [{ amount: 100, ingredient: { name: 'Teste', source: 'BASE_ROTULA', allergens: [] } }] };
+  ingredients: [{ amount: 100, ingredient: { name: 'Teste', source: 'BASE_ROTULA', allergens: [], containsGluten: false, containsLactose: false } }] };
 const compose = (state, allergens = [], confirmedAllergens = []) => compositor.composeFinalLabelPreview({ ...recipe, confirmedAllergens,
   ingredients: [{ ...recipe.ingredients[0], ingredient: { ...recipe.ingredients[0].ingredient, allergenStatus: state, allergens } }] }, null);
 const legacy = compose(undefined);
@@ -69,6 +72,10 @@ assert.equal(compose('KNOWN', ['Leite']).status, 'REQUIRES_REVIEW');
 assert.equal(compose('KNOWN', ['Leite'], ['LEITE']).status, 'READY');
 assert.equal(compose('NONE').status, 'READY');
 assert.equal(compose('NONE').allergenStatus, 'NONE');
+const partialPreview = compose('UNKNOWN', ['Leite'], ['LEITE']);
+assert.equal(partialPreview.allergenStatus, 'UNKNOWN');
+assert(partialPreview.allergens.includes('LEITE'));
+assert.equal(partialPreview.status, 'REQUIRES_REVIEW');
 assert.equal(legacy.nutritionTable, table);
 assert.equal(nutrition.sodiumMg, null);
 assert.equal(nutrition.transFatG, 0);

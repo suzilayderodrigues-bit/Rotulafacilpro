@@ -79,11 +79,11 @@ export function buildIngredientComplement(original: Ingredient, form: FormData) 
   if (resolveIngredientAllergenState(original) === "UNKNOWN") {
     const requested = text(form, "allergenStatus") || "UNKNOWN";
     const values = text(form, "allergens").split(/[,;\n]+/).map(value => value.trim()).filter(Boolean);
+    if (requested === "NONE" && original.allergens.length) throw new IngredientComplementError("declaration");
     if (requested !== "UNKNOWN" || values.length) {
       if (text(form, "declarationConfirmed") !== "on") throw new IngredientComplementError("declaration");
       try {
-        const declaration = normalizeAllergenDeclaration(requested === "NONE" ? values : values.length ? [...new Set(values)] : null, requested);
-        if (declaration.allergenStatus === "UNKNOWN") throw new IngredientComplementError("declaration");
+        const declaration = normalizeAllergenDeclaration(requested === "NONE" ? values : values.length || original.allergens.length ? [...new Set([...original.allergens, ...values])] : null, requested);
         ({ allergens, allergenStatus } = allergenStorage(declaration));
         changed = true;
       } catch { throw new IngredientComplementError("declaration"); }
@@ -91,7 +91,7 @@ export function buildIngredientComplement(original: Ingredient, form: FormData) 
   }
   const containsGluten = complementBoolean(form, "containsGluten", original.containsGluten);
   const containsLactose = complementBoolean(form, "containsLactose", original.containsLactose);
-  const declarationsChanged = allergenStatus !== original.allergenStatus || containsGluten !== original.containsGluten || containsLactose !== original.containsLactose;
+  const declarationsChanged = allergenStatus !== original.allergenStatus || JSON.stringify(allergens) !== JSON.stringify(original.allergens) || containsGluten !== original.containsGluten || containsLactose !== original.containsLactose;
   if (!changed && !declarationsChanged) throw new IngredientComplementError("unchanged");
 
   const provenance = `Complementação privada de ${original.id}; origem: ${original.dataOrigin}. Fonte informada pela cliente: ${sourceKind === "LABEL" ? "rótulo" : "ficha técnica"} — ${sourceReference}.`;
